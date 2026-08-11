@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+
+<html lang="zh-Hant">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>
+    YTM Lyrics
+</title>
+
+<style>
+
+/* ========================================
+   整個視窗
+   ======================================== */
+
+body {
+
+    margin: 0;
+
+    padding: 15px;
+
+    font-family:
+        "Microsoft JhengHei",
+        sans-serif;
+
+    background: #202020;
+
+    color: white;
+
+}
+
+
+/* ========================================
+   標題
+   ======================================== */
+
+h1 {
+
+    margin-top: 0;
+
+    font-size: 20px;
+
+}
+
+
+/* ========================================
+   歌詞
+   ======================================== */
+
+#lyrics {
+
+    margin-top: 15px;
+
+}
+
+
+/* 每一句歌詞 */
+
+#lyrics div {
+
+    padding: 8px;
+
+    margin: 4px 0;
+
+    transition:
+        color 0.2s,
+        font-size 0.2s;
+
+}
+
+
+/* ========================================
+   目前播放的歌詞
+   ======================================== */
+
+#lyrics .current {
+
+    color: red;
+
+    font-weight: bold;
+
+    font-size: 1.2em;
+
+}
+
+/* ========================================
+   浮動視窗控制列
+   ======================================== */
+
+#titleBar {
+
+    padding: 10px;
+
+    margin: -15px -15px 15px -15px;
+
+    background: #151515;
+
+    cursor: move;
+
+    user-select: none;
+
+    font-weight: bold;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<!-- ========================================
+浮動視窗控制列
+======================================== -->
+
+<div id="titleBar">
+
+    <span id="windowTitle">
+        🎵 YTM Lyrics
+    </span>
+    
+</div>
+    
+    
+<!-- ========================================
+歌詞
+======================================== -->
+    
+<div id="lyrics"> 
+    等待歌曲...
+</div>
+
+
+<script src="lyrics.js"></script>
+
+</body>
+
+</html>

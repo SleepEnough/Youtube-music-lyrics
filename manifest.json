@@ -1,0 +1,34 @@
+{
+    "manifest_version": 3,
+
+    "name": "YTM Lyrics",
+    "version": "0.1.0",
+
+    "description": "YouTube Music 本機同步歌詞外掛",
+
+    "action": {
+        "default_title": "YTM Lyrics"
+    },
+
+
+    "options_page": "settings.html",
+
+    "permissions": [
+        "storage"
+    ],
+    
+    "background": {
+    "service_worker": "background.js"
+    },
+    
+    "content_scripts": [
+        {
+            "matches": [
+                "https://music.youtube.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
