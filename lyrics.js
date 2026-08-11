@@ -20,6 +20,17 @@ console.log(
 
 let currentLyric = null;
 
+// ========================================
+// 使用者是否正在手動捲動
+// ========================================
+
+let userScrolling = false;
+
+// ========================================
+// 程式是否正在自動捲動
+// ========================================
+
+let autoScrolling = false;
 
 // ========================================
 // 接收 Background 傳來的訊息
@@ -236,82 +247,47 @@ function highlightCurrentLyric(
 
 
     // 一句一句檢查
-    for (
-        const line of lines
-    ) {
+    for (const line of lines) {
 
         // 取得這一句的時間
         const time =
-            parseFloat(
-                line.dataset.time
-            );
-
+            parseFloat(line.dataset.time);
 
         // 比較時間
-        const isCurrent =
-            Math.abs(
-                time -
-                lyric.time
-            ) < 0.01;
-
+        const isCurrent = Math.abs(time - lyric.time) < 0.01;
 
         // ====================================
         // 是目前播放的歌詞
         // ====================================
 
         if (isCurrent) {
+            console.log("🔴 找到目前歌詞：", line.textContent);
 
-            console.log(
-                "🔴 找到目前歌詞：",
-                line.textContent
-            );
-
-
-            line.classList.add(
-                "current"
-            );
+            line.classList.add("current");
 
             // 直接套用樣式
-            line.style.color =
-                "red";
-
-            line.style.fontWeight =
-                "bold";
-
-            line.style.fontSize =
-                "1.2em";
+            line.style.color = "red";
+            line.style.fontWeight = "bold";
+            line.style.fontSize = "1.2em";
 
             // ====================================
-            // 自動捲動到目前歌詞
+            // 自動捲動
             // ====================================
-
-            line.scrollIntoView({
-                behavior: "smooth",
-                block: "center"
-            });
+            if (!userScrolling) {
+                autoScrolling = true;
+                line.scrollIntoView({behavior: "smooth", block: "center"});
+                setTimeout(() => {autoScrolling = false;}, 500);
+            }
         }
-
-
         // ====================================
         // 不是目前播放的歌詞
         // ====================================
-
         else {
-
-            line.classList.remove(
-                "current"
-            );
-
-
+            line.classList.remove("current");
             // 清除樣式
-            line.style.color =
-                "";
-
-            line.style.fontWeight =
-                "";
-
-            line.style.fontSize =
-                "";
+            line.style.color = "";
+            line.style.fontWeight = "";
+            line.style.fontSize = "";
         }
     }
 }
@@ -520,3 +496,165 @@ document.addEventListener(
 
     }
 );
+
+// ========================================
+// 偵測使用者手動捲動歌詞
+// ========================================
+
+const lyricsElement =
+document.querySelector(
+    "#lyrics"
+);
+
+
+if (lyricsElement) {
+
+    lyricsElement.addEventListener(
+        "scroll",
+        () => {
+
+            // ====================================
+            // 程式自己捲動
+            // ====================================
+
+            if (autoScrolling) {
+
+                return;
+            }
+
+
+            // ====================================
+            // 使用者手動捲動
+            // ====================================
+
+            console.log(
+                "🖱️ 使用者正在手動捲動歌詞"
+            );
+
+
+            userScrolling =
+                true;
+
+
+            // ====================================
+            // 檢查目前歌詞是否已經回到附近
+            // ====================================
+            checkAutoScrollResume();
+        }
+    );
+}
+
+// ========================================
+// 檢查是否恢復自動捲動
+// ========================================
+
+function checkAutoScrollResume() {
+
+    // 沒有目前歌詞
+    if (!currentLyric) {
+
+        return;
+    }
+
+
+    // 沒有歌詞容器
+    if (!lyricsElement) {
+
+        return;
+    }
+
+
+    // 找到所有歌詞
+    const lines =
+        lyricsElement.querySelectorAll(
+            "div"
+        );
+
+
+    // ====================================
+    // 找目前播放的歌詞
+    // ====================================
+
+    for (const line of lines) {
+
+        const time =
+            parseFloat(
+                line.dataset.time
+            );
+
+
+        // 不是目前歌詞
+        if (
+            Math.abs(
+                time -
+                currentLyric.time
+            ) >= 0.01
+        ) {
+
+            continue;
+        }
+
+
+        // ====================================
+        // 計算目前歌詞的位置
+        // ====================================
+
+        const lineTop =
+            line.offsetTop;
+
+
+        const scrollTop =
+            lyricsElement.scrollTop;
+
+
+        const containerHeight =
+            lyricsElement.clientHeight;
+
+
+        const lineCenter =
+            lineTop +
+            line.offsetHeight / 2;
+
+
+        const containerCenter =
+            scrollTop +
+            containerHeight / 2;
+
+
+        // ====================================
+        // 計算距離
+        // ====================================
+
+        const distance =
+            Math.abs(
+                lineCenter -
+                containerCenter
+            );
+
+
+        console.log(
+            "📏 目前歌詞距離中央：",
+            Math.round(distance),
+            "px"
+        );
+
+
+        // ====================================
+        // 如果目前歌詞已經接近中央
+        // ====================================
+
+        if (distance < 100) {
+
+            console.log(
+                "🔄 已回到目前歌詞附近，恢復自動捲動"
+            );
+
+
+            userScrolling =
+                false;
+        }
+
+
+        return;
+    }
+}
