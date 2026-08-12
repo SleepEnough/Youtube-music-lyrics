@@ -39,6 +39,16 @@ let autoScrolling = false;
 let lyricColor = "#ff0000";
 
 // ========================================
+// 歌詞顯示設定
+// ========================================
+
+let lyricFontSize = 18;
+
+let lyricLineHeight = 1.6;
+
+let lyricFontWeight = 400;
+
+// ========================================
 // 接收 Background 傳來的訊息
 // ========================================
 
@@ -125,9 +135,11 @@ chrome.runtime.onMessage.addListener(
 // 顯示整份歌詞
 // ========================================
 
-function showLyrics(
+async function showLyrics(
     lyrics
 ) {
+
+    await loadLyricDisplaySettings();
 
     const lyricsElement =
         document.querySelector(
@@ -170,8 +182,13 @@ function showLyrics(
 
 
         // 把時間存進 HTML
-        line.dataset.time =
-            lyric.time;
+        line.dataset.time = lyric.time;
+
+        line.style.fontSize = lyricFontSize + "px";
+
+        line.style.fontWeight = lyricFontWeight;
+
+        line.style.lineHeight = lyricLineHeight;
 
 
         // 加入歌詞視窗
@@ -273,8 +290,8 @@ function highlightCurrentLyric(
 
             // 直接套用樣式
             line.style.color = lyricColor;
-            line.style.fontWeight = "bold";
-            line.style.fontSize = "1.2em";
+            line.style.fontWeight = lyricFontWeight;
+            line.style.fontSize = lyricFontSize + "px";
 
             // ====================================
             // 自動捲動
@@ -292,8 +309,8 @@ function highlightCurrentLyric(
             line.classList.remove("current");
             // 清除樣式
             line.style.color = "";
-            line.style.fontWeight = "";
-            line.style.fontSize = "";
+            line.style.fontWeight = lyricFontWeight;
+            line.style.fontSize = lyricFontSize + "px";
         }
     }
 }
@@ -690,4 +707,62 @@ async function loadLyricColor() {
     }
 }
 
+// ========================================
+// 讀取歌詞顯示設定
+// ========================================
+
+async function loadLyricDisplaySettings() {
+
+    try {
+
+        const result =
+            await chrome.storage.local.get([
+                "fontSize",
+                "lineHeight",
+                "fontWeight"
+            ]);
+
+
+        lyricFontSize =
+            result.fontSize ??
+            18;
+
+
+        lyricLineHeight =
+            result.lineHeight ??
+            1.6;
+
+
+        lyricFontWeight =
+            result.fontWeight ??
+            400;
+
+
+        console.log(
+            "🔤 歌詞顯示設定已載入：",
+            {
+                fontSize:
+                    lyricFontSize,
+
+                lineHeight:
+                    lyricLineHeight,
+
+                fontWeight:
+                    lyricFontWeight
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ 載入歌詞顯示設定失敗：",
+            error
+        );
+
+    }
+}
+
 loadLyricColor();
+
+loadLyricDisplaySettings();

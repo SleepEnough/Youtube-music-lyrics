@@ -20,6 +20,24 @@
             vertical-align: middle;
             cursor: pointer;
         }
+        #fontSizeSetting,
+        #lineHeightSetting,
+        #fontWeightSetting {
+            margin-top: 15px;
+            padding: 10px;
+        }
+
+        #fontSize,
+        #lineHeight {
+            vertical-align: middle;
+        }
+
+        #fontSizeValue,
+        #lineHeightValue {
+            display: inline-block;
+            min-width: 45px;
+            margin-left: 8px;
+        }
     </style>
 
 </head>
@@ -59,7 +77,81 @@
             id="lyricColor"
             value="#ff0000"
         >
+    </div>
 
+    <!-- ========================================
+     歌詞字體大小
+     ======================================== -->
+
+    <div id="fontSizeSetting">
+
+        <label for="fontSize">
+            🔤 歌詞字體大小：
+        </label>
+
+        <input
+            type="range"
+            id="fontSize"
+            min="12"
+            max="36"
+            value="18"
+        >
+        <span id="fontSizeValue">
+            18px
+        </span>
+    </div>
+
+    <!-- ========================================
+     歌詞行距
+     ======================================== -->
+
+    <div id="lineHeightSetting">
+
+        <label for="lineHeight">
+            ↕️ 歌詞行距：
+        </label>
+
+        <input
+            type="range"
+            id="lineHeight"
+            min="1"
+            max="3"
+            step="0.1"
+            value="1.6"
+        >
+        <span id="lineHeightValue">
+            1.6
+        </span>
+    </div>
+
+    <!-- ========================================
+     歌詞字體粗細
+     ======================================== -->
+
+    <div id="fontWeightSetting">
+
+        <label for="fontWeight">
+            🅱️ 歌詞字體粗細：
+        </label>
+
+        <select id="fontWeight">
+
+            <option value="400">
+                正常
+            </option>
+
+            <option value="500">
+                稍粗
+            </option>
+
+            <option value="600">
+                半粗
+            </option>
+
+            <option value="700">
+                粗體
+            </option>
+        </select>
     </div>
 
     <hr>

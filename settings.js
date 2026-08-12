@@ -13,11 +13,29 @@ const lyricColorPicker = document.querySelector("#lyricColor");
 
 const reconnectFolderButton = document.querySelector("#reconnectFolder");
 
-const folderName =
-    document.querySelector("#folderName");
+const folderName = document.querySelector("#folderName");
 
-const fileList =
-    document.querySelector("#fileList");
+const fileList = document.querySelector("#fileList");
+
+const fontSizeControl = document.querySelector("#fontSize");
+
+const fontSizeValue = document.querySelector("#fontSizeValue");
+
+const lineHeightControl = document.querySelector("#lineHeight");
+
+const lineHeightValue = document.querySelector("#lineHeightValue");
+
+const fontWeightControl = document.querySelector("#fontWeight");
+
+// ========================================
+// 歌詞顯示設定預設值
+// ========================================
+
+const DEFAULT_FONT_SIZE = 18;
+
+const DEFAULT_LINE_HEIGHT = 1.6;
+
+const DEFAULT_FONT_WEIGHT = 400;
 
 
 // ========================================
@@ -594,15 +612,196 @@ if (lyricColorPicker) {
 
 
             await chrome.storage.local.set({
-
                 lyricColor:
                     color
+            });
+
+            console.log("💾 歌詞顏色已儲存");
+        }
+    );
+}
+
+// ========================================
+// 載入歌詞顯示設定
+// ========================================
+
+async function loadLyricDisplaySettings() {
+
+    try {
+
+        const result =
+            await chrome.storage.local.get([
+                "fontSize",
+                "lineHeight",
+                "fontWeight"
+            ]);
+
+
+        const fontSize =
+            result.fontSize ??
+            DEFAULT_FONT_SIZE;
+
+
+        const lineHeight =
+            result.lineHeight ??
+            DEFAULT_LINE_HEIGHT;
+
+
+        const fontWeight =
+            result.fontWeight ??
+            DEFAULT_FONT_WEIGHT;
+
+
+        // ================================
+        // 更新 UI
+        // ================================
+
+        if (fontSizeControl) {
+
+            fontSizeControl.value =
+                fontSize;
+
+        }
+
+
+        if (fontSizeValue) {
+
+            fontSizeValue.textContent =
+                fontSize + "px";
+
+        }
+
+
+        if (lineHeightControl) {
+
+            lineHeightControl.value =
+                lineHeight;
+
+        }
+
+
+        if (lineHeightValue) {
+
+            lineHeightValue.textContent =
+                lineHeight;
+
+        }
+
+
+        if (fontWeightControl) {
+
+            fontWeightControl.value =
+                fontWeight;
+
+        }
+
+
+        console.log(
+            "🔤 歌詞顯示設定：",
+            {
+                fontSize,
+                lineHeight,
+                fontWeight
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ 讀取歌詞顯示設定失敗：",
+            error
+        );
+
+    }
+}
+
+if (fontSizeControl) {
+
+    fontSizeControl.addEventListener(
+        "input",
+        async () => {
+
+            const value =
+                Number(
+                    fontSizeControl.value
+                );
+
+
+            fontSizeValue.textContent =
+                value + "px";
+
+
+            await chrome.storage.local.set({
+
+                fontSize:
+                    value
 
             });
 
 
             console.log(
-                "💾 歌詞顏色已儲存"
+                "🔤 字體大小：",
+                value
+            );
+        }
+    );
+}
+
+if (lineHeightControl) {
+
+    lineHeightControl.addEventListener(
+        "input",
+        async () => {
+
+            const value =
+                Number(
+                    lineHeightControl.value
+                );
+
+
+            lineHeightValue.textContent =
+                value;
+
+
+            await chrome.storage.local.set({
+
+                lineHeight:
+                    value
+
+            });
+
+            console.log(
+                "↕️ 歌詞行距：",
+                value
+            );
+        }
+    );
+}
+
+if (fontWeightControl) {
+
+    fontWeightControl.addEventListener(
+        "change",
+        async () => {
+
+            const value =
+                Number(
+                    fontWeightControl.value
+                );
+
+
+            await chrome.storage.local.set({
+
+                fontWeight:
+                    value
+
+            });
+
+
+            console.log(
+                "🅱️ 歌詞粗細：",
+                value
             );
 
         }
@@ -614,3 +813,5 @@ if (lyricColorPicker) {
 restoreFolder();
 
 loadLyricColor();
+
+loadLyricDisplaySettings();
