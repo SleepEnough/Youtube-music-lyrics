@@ -4,96 +4,87 @@
 
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<title>
+    <title>
     YTM Lyrics
-</title>
+    </title>
 
-<style>
+    <style>
 
-/* ========================================
-   整個視窗
-   ======================================== */
+    /* ========================================
+    整個視窗
+    ======================================== */
 
-body {
-    margin: 0;
-    padding: 15px;
-    font-family:
-        "Microsoft JhengHei",
-        sans-serif;
-    background: #202020;
-    color: white;
-}
+    body {
+        margin: 0;
+        padding: 15px;
+        font-family:
+            "Microsoft JhengHei",
+            sans-serif;
+        background: #202020;
+        color: white;
+    }
 
-/* ========================================
-   標題
-   ======================================== */
+    /* ========================================
+    標題
+    ======================================== */
 
-h1 {
-    margin-top: 0;
-    font-size: 20px;
-}
+    h1 {
+        margin-top: 0;
+        font-size: 20px;
+    }
 
 
-/* ========================================
-   歌詞
-   ======================================== */
+    /* ========================================
+    歌詞
+    ======================================== */
 
-#lyrics {
-    margin-top: 15px;
-    height: calc(100vh - 70px);
-    overflow-y: auto;
-}
+    #lyrics {
+        margin-top: 15px;
+        height: calc(100vh - 70px);
+        overflow-y: auto;
+    }
 
-/* 每一句歌詞 */
-#lyrics div {
-    padding: 8px;
-    margin: 4px 0;
+    /* 每一句歌詞 */
+    #lyrics div {
+        padding: 8px;
+        margin: 4px 0;
 
-    transition:
-        color 0.2s,
-        font-size 0.2s;
-}
+        transition:
+            color 0.2s,
+            font-size 0.2s;
+    }
 
-/* ========================================
-   目前播放的歌詞
-   ======================================== */
+    /* ========================================
+    目前播放的歌詞
+    ======================================== */
 
-#lyrics .current {
+    #lyrics .current {
+        font-weight: bold;
+        font-size: 1.2em;
+    }
 
-    color: red;
+    /* ========================================
+    浮動視窗控制列
+    ======================================== */
 
-    font-weight: bold;
+    #titleBar {
 
-    font-size: 1.2em;
+        padding: 10px;
 
-}
+        margin: -15px -15px 15px -15px;
 
-/* ========================================
-   浮動視窗控制列
-   ======================================== */
+        background: #151515;
 
-#titleBar {
+        cursor: move;
 
-    padding: 10px;
+        user-select: none;
 
-    margin: -15px -15px 15px -15px;
-
-    background: #151515;
-
-    cursor: move;
-
-    user-select: none;
-
-    font-weight: bold;
-
-}
-
-</style>
-
+        font-weight: bold;
+    }
+    </style>
 </head>
-
 
 <body>
 

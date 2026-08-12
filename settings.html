@@ -8,6 +8,20 @@
 
     <title>YTM Lyrics 設定</title>
 
+    <style>
+        #colorSetting {
+            margin-top: 20px;
+            padding: 10px;
+        }
+
+        #lyricColor {
+            width: 60px;
+            height: 35px;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -30,6 +44,23 @@
         尚未選擇資料夾
     </p>
 
+    <!-- ========================================
+     歌詞顏色設定
+     ======================================== -->
+
+    <div id="colorSetting">
+
+        <label for="lyricColor">
+            🎨 目前歌詞顏色：
+        </label>
+
+        <input
+            type="color"
+            id="lyricColor"
+            value="#ff0000"
+        >
+
+    </div>
 
     <hr>
 

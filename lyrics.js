@@ -33,6 +33,12 @@ let userScrolling = false;
 let autoScrolling = false;
 
 // ========================================
+// 目前歌詞顏色
+// ========================================
+
+let lyricColor = "#ff0000";
+
+// ========================================
 // 接收 Background 傳來的訊息
 // ========================================
 
@@ -266,7 +272,7 @@ function highlightCurrentLyric(
             line.classList.add("current");
 
             // 直接套用樣式
-            line.style.color = "red";
+            line.style.color = lyricColor;
             line.style.fontWeight = "bold";
             line.style.fontSize = "1.2em";
 
@@ -658,3 +664,30 @@ function checkAutoScrollResume() {
         return;
     }
 }
+
+// ========================================
+// 讀取歌詞顏色
+// ========================================
+
+async function loadLyricColor() {
+
+    try {
+
+        const result =
+            await chrome.storage.local.get(
+                "lyricColor"
+            );
+
+
+        if (result.lyricColor) {
+            lyricColor =
+                result.lyricColor;
+        }
+
+        console.log("🎨 目前歌詞顏色：", lyricColor);
+    } catch (error) {
+        console.error("❌ 讀取歌詞顏色失敗：", error);
+    }
+}
+
+loadLyricColor();

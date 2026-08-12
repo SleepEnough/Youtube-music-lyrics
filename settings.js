@@ -9,6 +9,8 @@
 
 const selectFolderButton = document.querySelector("#selectFolder");
 
+const lyricColorPicker = document.querySelector("#lyricColor");
+
 const reconnectFolderButton = document.querySelector("#reconnectFolder");
 
 const folderName =
@@ -528,5 +530,87 @@ reconnectFolderButton.addEventListener(
     }
 );
 
+// ========================================
+// 載入歌詞顏色
+// ========================================
+
+async function loadLyricColor() {
+
+    try {
+
+        const result =
+            await chrome.storage.local.get(
+                "lyricColor"
+            );
+
+
+        const color =
+            result.lyricColor ||
+            "#ff0000";
+
+
+        if (lyricColorPicker) {
+
+            lyricColorPicker.value =
+                color;
+
+        }
+
+
+        console.log(
+            "🎨 載入歌詞顏色：",
+            color
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ 載入歌詞顏色失敗：",
+            error
+        );
+
+    }
+}
+
+// ========================================
+// 修改歌詞顏色
+// ========================================
+
+if (lyricColorPicker) {
+
+    lyricColorPicker.addEventListener(
+        "change",
+        async () => {
+
+            const color =
+                lyricColorPicker.value;
+
+
+            console.log(
+                "🎨 設定歌詞顏色：",
+                color
+            );
+
+
+            await chrome.storage.local.set({
+
+                lyricColor:
+                    color
+
+            });
+
+
+            console.log(
+                "💾 歌詞顏色已儲存"
+            );
+
+        }
+    );
+
+}
+
 // 啟動
 restoreFolder();
+
+loadLyricColor();
