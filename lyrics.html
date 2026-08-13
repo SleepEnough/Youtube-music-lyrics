@@ -22,19 +22,11 @@
         font-family:
             "Microsoft JhengHei",
             sans-serif;
-        background: #202020;
+          background:
+        rgba(0, 0, 0, var(--background-opacity));
         color: white;
+        --background-opacity: 1;
     }
-
-    /* ========================================
-    標題
-    ======================================== */
-
-    h1 {
-        margin-top: 0;
-        font-size: 20px;
-    }
-
 
     /* ========================================
     歌詞
@@ -44,6 +36,7 @@
         margin-top: 15px;
         height: calc(100vh - 70px);
         overflow-y: auto;
+        background: transparent;
     }
 
     /* 每一句歌詞 */
@@ -75,7 +68,7 @@
 
         margin: -15px -15px 15px -15px;
 
-        background: #151515;
+        background: rgba(21, 21, 21, var(--background-opacity));
 
         cursor: move;
 

@@ -29,6 +29,10 @@ const fontWeightControl = document.querySelector("#fontWeight");
 
 const textAlignControl = document.querySelector("#textAlign");
 
+const backgroundOpacityControl = document.querySelector("#backgroundOpacity");
+
+const backgroundOpacityValue = document.querySelector("#backgroundOpacityValue");
+
 // ========================================
 // 歌詞顯示設定預設值
 // ========================================
@@ -40,6 +44,8 @@ const DEFAULT_LINE_HEIGHT = 1.6;
 const DEFAULT_FONT_WEIGHT = 400;
 
 const DEFAULT_TEXT_ALIGN = "center";
+
+const DEFAULT_BACKGROUND_OPACITY = 100;
 
 // ========================================
 // IndexedDB
@@ -536,13 +542,15 @@ async function loadLyricDisplaySettings() {
             "fontSize",
             "lineHeight",
             "fontWeight",
-            "textAlign"
+            "textAlign",
+            "backgroundOpacity"
         ]);
 
         const fontSize = result.fontSize ?? DEFAULT_FONT_SIZE;
         const lineHeight = result.lineHeight ?? DEFAULT_LINE_HEIGHT;
         const fontWeight = result.fontWeight ?? DEFAULT_FONT_WEIGHT;
         const textAlign = result.textAlign ?? DEFAULT_TEXT_ALIGN;
+        const backgroundOpacity = result.backgroundOpacity ?? DEFAULT_BACKGROUND_OPACITY;
 
         // ================================
         // 更新 UI
@@ -565,6 +573,12 @@ async function loadLyricDisplaySettings() {
 
         if(textAlignControl)
             textAlign.value = textAlign;
+
+        if (backgroundOpacityControl)
+        backgroundOpacityControl.value = backgroundOpacity;
+
+        if (backgroundOpacityValue) 
+            backgroundOpacityValue.textContent = backgroundOpacity + "%";
 
         console.log("🔤 歌詞顯示設定：",
             {
@@ -643,6 +657,21 @@ if (textAlignControl) {
             setting:"textAlign",
             value:value
         });
+    });
+}
+
+if (backgroundOpacityControl) {
+    backgroundOpacityControl.addEventListener("input", async () => {
+        const value = Number(backgroundOpacityControl.value);
+
+        backgroundOpacityValue.textContent = value + "%";
+
+        await chrome.storage.local.set({backgroundOpacity:value});
+
+        chrome.runtime.sendMessage({
+            type:"lyricDisplaySettingChanged",
+            setting:"backgroundOpacity",
+            value:value});
     });
 }
 

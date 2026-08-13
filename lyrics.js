@@ -30,6 +30,7 @@ let lyricFontSize = 18;
 let lyricLineHeight = 1.6;
 let lyricFontWeight = 400;
 let lyricTextAlign = "center";
+let backgroundOpacity = 100;
 // ========================================
 // 接收 Background 傳來的訊息
 // ========================================
@@ -79,7 +80,11 @@ chrome.runtime.onMessage.addListener((message) => {
         if (message.setting === "textAlign")
             lyricTextAlign = message.value;
 
+        if (message.setting === "backgroundOpacity")
+            backgroundOpacity = Number(message.value);
+
         applyLyricDisplaySettings();
+        applyBackgroundOpacity();
     }
 });
 
@@ -637,14 +642,14 @@ async function loadLyricColor() {
 // ========================================
 
 async function loadLyricDisplaySettings() {
-
     try {
         const result =
             await chrome.storage.local.get([
                 "fontSize",
                 "lineHeight",
                 "fontWeight",
-                "textAlign"
+                "textAlign",
+                "backgroundOpacity"
             ]);
 
         lyricFontSize = result.fontSize ?? 18;
@@ -654,6 +659,8 @@ async function loadLyricDisplaySettings() {
         lyricFontWeight = result.fontWeight ?? 400;
 
         lyricTextAlign = result.textAlign ?? "center";
+
+        backgroundOpacity = result.backgroundOpacity ?? 100;
 
         console.log("🔤 歌詞顯示設定已載入：",
             {
@@ -670,7 +677,6 @@ async function loadLyricDisplaySettings() {
 // ========================================
 // 套用歌詞顯示設定
 // ========================================
-
 function applyLyricDisplaySettings() {
 
     const lines = document.querySelectorAll("#lyrics div");
@@ -691,5 +697,20 @@ function applyLyricDisplaySettings() {
         highlightCurrentLyric(currentLyric);
 }
 
-loadLyricColor();
-loadLyricDisplaySettings();
+// ========================================
+// 套用背景透明度
+// ========================================
+function applyBackgroundOpacity() {
+
+    const opacity = backgroundOpacity / 100;
+
+    document.body.style.setProperty("--background-opacity", opacity);
+
+    console.log("🌫️ 背景透明度：", backgroundOpacity + "%");
+}
+
+(async () => {
+    await loadLyricColor();
+    await loadLyricDisplaySettings();
+    applyBackgroundOpacity();
+})();
