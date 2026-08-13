@@ -52,84 +52,52 @@ let lyricFontWeight = 400;
 // 接收 Background 傳來的訊息
 // ========================================
 
-chrome.runtime.onMessage.addListener(
-    (message) => {
-
-        console.log(
-            "📨 歌詞視窗收到訊息：",
-            message.type
-        );
-
-
-        // ====================================
-        // 收到整份歌詞
-        // ====================================
-
-        if (
-            message.type ===
-            "lyricsUpdated"
-        ) {
-
-            console.log(
-                "🎵 收到歌詞，共",
-                message.lyrics.length,
-                "句"
-            );
-
-
-            // 建立歌詞畫面
-            showLyrics(
-                message.lyrics
-            );
-
-
-            // -------------------------------
-            // 很重要
-            // -------------------------------
-            //
-            // 如果目前已經知道正在播放哪一句，
-            // 歌詞重新建立後，
-            // 立刻再套用一次高亮。
-            //
-
-            if (currentLyric) {
-
-                highlightCurrentLyric(
-                    currentLyric
-                );
-            }
-        }
-
-
-        // ====================================
-        // 收到目前播放歌詞
-        // ====================================
-
-        if (
-            message.type ===
-            "currentLyricUpdated"
-        ) {
-
-            console.log(
-                "🎯 收到目前播放歌詞：",
-                message.lyric
-            );
-
-
-            // 記住目前歌詞
-            currentLyric =
-                message.lyric;
-
-
-            // 標示目前歌詞
-            highlightCurrentLyric(
-                currentLyric
-            );
-        }
-
+chrome.runtime.onMessage.addListener((message) => {
+    console.log("📨 歌詞視窗收到訊息：", message.type);
+    // ====================================
+    // 收到整份歌詞
+    // ====================================
+    if (message.type === "lyricsUpdated"){
+        console.log("🎵 收到歌詞，共", message.lyrics.length, "句");
+        // 建立歌詞畫面
+        showLyrics(message.lyrics);
+        // -------------------------------
+        // 很重要
+        // -------------------------------
+        // 如果目前已經知道正在播放哪一句，
+        // 歌詞重新建立後，
+        // 立刻再套用一次高亮。
+        if (currentLyric)
+            highlightCurrentLyric(currentLyric);
     }
-);
+    // ====================================
+    // 收到目前播放歌詞
+    // ====================================
+    if (message.type === "currentLyricUpdated"){
+        console.log("🎯 收到目前播放歌詞：", message.lyric);
+        // 記住目前歌詞
+        currentLyric = message.lyric;
+        // 標示目前歌詞
+        highlightCurrentLyric(currentLyric);
+    }
 
+    // ====================================
+    // 收到顯示設定變更
+    // ====================================
+    if (message.type === "lyricDisplaySettingChanged"){
+        console.log("🎨 歌詞顯示設定即時更新：", message.setting, message.value);
+        if (message.setting === "fontSize")
+            lyricFontSize = Number(message.value);
+
+        if (message.setting === "lineHeight")
+            lyricLineHeight = Number(message.value);
+
+        if (message.setting === "fontWeight")
+            lyricFontWeight = Number(message.value);
+
+        applyLyricDisplaySettings();
+    }
+});
 
 // ========================================
 // 顯示整份歌詞
@@ -751,18 +719,33 @@ async function loadLyricDisplaySettings() {
                     lyricFontWeight
             }
         );
-
-
     } catch (error) {
-
-        console.error(
-            "❌ 載入歌詞顯示設定失敗：",
-            error
-        );
-
+        console.error("❌ 載入歌詞顯示設定失敗：", error);
     }
 }
 
-loadLyricColor();
+// ========================================
+// 套用歌詞顯示設定
+// ========================================
 
+function applyLyricDisplaySettings() {
+
+    const lines = document.querySelectorAll("#lyrics div");
+
+    console.log("🎨 套用歌詞顯示設定，共", lines.length, "句");
+
+    for (const line of lines) {
+        line.style.fontSize = lyricFontSize + "px";
+        line.style.lineHeight = lyricLineHeight;
+        line.style.fontWeight = lyricFontWeight;
+    }
+
+    // ====================================
+    // 重新套用目前歌詞
+    // ====================================
+    if (currentLyric)
+        highlightCurrentLyric(currentLyric);
+}
+
+loadLyricColor();
 loadLyricDisplaySettings();

@@ -704,15 +704,8 @@ async function loadLyricDisplaySettings() {
                 fontWeight
             }
         );
-
-
     } catch (error) {
-
-        console.error(
-            "❌ 讀取歌詞顯示設定失敗：",
-            error
-        );
-
+        console.error("❌ 讀取歌詞顯示設定失敗：", error);
     }
 }
 
@@ -722,28 +715,19 @@ if (fontSizeControl) {
         "input",
         async () => {
 
-            const value =
-                Number(
-                    fontSizeControl.value
-                );
+            const value = Number(fontSizeControl.value);
 
+            fontSizeValue.textContent = value + "px";
 
-            fontSizeValue.textContent =
-                value + "px";
+            console.log("🔤 字體大小：", value);
 
+            await chrome.storage.local.set({fontSize: value});
 
-            await chrome.storage.local.set({
-
-                fontSize:
-                    value
-
+            chrome.runtime.sendMessage({
+                type: "lyricDisplaySettingChanged",
+                setting: "fontSize",
+                value: value
             });
-
-
-            console.log(
-                "🔤 字體大小：",
-                value
-            );
         }
     );
 }
@@ -754,27 +738,19 @@ if (lineHeightControl) {
         "input",
         async () => {
 
-            const value =
-                Number(
-                    lineHeightControl.value
-                );
+            const value = Number(lineHeightControl.value);
 
+            lineHeightValue.textContent = value;
+            
+            console.log("↕️ 歌詞行距：", value);
 
-            lineHeightValue.textContent =
-                value;
+            await chrome.storage.local.set({lineHeight: value});
 
-
-            await chrome.storage.local.set({
-
-                lineHeight:
-                    value
-
+            chrome.runtime.sendMessage({
+                type:"lyricDisplaySettingChanged",
+                setting:"lineHeight",
+                value:value
             });
-
-            console.log(
-                "↕️ 歌詞行距：",
-                value
-            );
         }
     );
 }
@@ -785,28 +761,19 @@ if (fontWeightControl) {
         "change",
         async () => {
 
-            const value =
-                Number(
-                    fontWeightControl.value
-                );
+            const value =Number(fontWeightControl.value);
 
+            console.log("🅱️ 歌詞粗細：", value);
 
-            await chrome.storage.local.set({
-
-                fontWeight:
-                    value
-
+            await chrome.storage.local.set({fontWeight: value});
+            
+            chrome.runtime.sendMessage({
+                type:"lyricDisplaySettingChanged",
+                setting:"fontWeight",
+                value:value
             });
-
-
-            console.log(
-                "🅱️ 歌詞粗細：",
-                value
-            );
-
         }
     );
-
 }
 
 // 啟動

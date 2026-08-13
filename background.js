@@ -532,51 +532,31 @@ async function findLyricsFile(fileName)
 chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
 
-        console.log(
-            "📨 Background 收到訊息：",
-            message
-        );
+        console.log("📨 Background 收到訊息：",message);
 
         // ========================================
         // 開啟歌詞視窗
         // ========================================
-
-        if (
-            message.type ===
-            "openLyricsWindow"
-        ) {
-
+        if (message.type === "openLyricsWindow"){
             // ====================================
             // 同時讀取：
             //
             // ① 上次位置
             // ② 上次大小
             // ====================================
-
             Promise.all([
                 loadLyricsWindowPosition(),
                 loadLyricsWindowSize()
             ]).then(
                 ([position, size]) => {
+                    console.log("📍 上次位置：", position);
 
-                    console.log(
-                        "📍 上次位置：",
-                        position
-                    );
-
-
-                    console.log(
-                        "📐 上次大小：",
-                        size
-                    );
-
+                    console.log("📐 上次大小：", size);
 
                     // ====================================
                     // 建立預設視窗設定
                     // ====================================
-
                     const windowOptions = {
-
                         url:
                             chrome.runtime.getURL(
                                 "lyrics.html"
@@ -641,15 +621,11 @@ chrome.runtime.onMessage.addListener(
                     );
 
                 }
-            )
-
-            .then(
+            ).then(
                 (window) => {
-
                     // 記住歌詞視窗 ID
                     lyricsWindowId =
                         window.id;
-
 
                     console.log(
                         "🪟 歌詞視窗已建立，ID：",
@@ -691,12 +667,7 @@ chrome.runtime.onMessage.addListener(
         // ========================================
         // 移動歌詞視窗
         // ========================================
-
-        if (
-            message.type ===
-            "moveLyricsWindow"
-        ) {
-
+        if (message.type === "moveLyricsWindow"){
             console.log(
                 "🪟 收到視窗移動：",
                 message.deltaX,
@@ -809,18 +780,12 @@ chrome.runtime.onMessage.addListener(
         // ========================================
         // 收到完整歌詞
         // ========================================
-
-        if (
-            message.type ===
-            "updateLyrics"
-        ) {
-
+        if (message.type === "updateLyrics"){
             console.log(
                 "📝 Background 收到歌詞，共",
                 message.lyrics.length,
                 "句"
             );
-
 
             // ====================================
             // 儲存完整歌詞
@@ -857,16 +822,10 @@ chrome.runtime.onMessage.addListener(
             return;
         }
 
-
         // ========================================
         // 收到目前播放歌詞
         // ========================================
-
-        if (
-            message.type ===
-            "updateCurrentLyric"
-        ) {
-
+        if (message.type === "updateCurrentLyric"){
             console.log(
                 "🎵 Background 收到目前歌詞：",
                 message.lyric
@@ -905,38 +864,33 @@ chrome.runtime.onMessage.addListener(
         }
 
         // ========================================
+        // 歌詞顯示設定變更
+        // ========================================
+        if (message.type === "lyricDisplaySettingChanged"){
+            console.log("🎨 收到歌詞顯示設定變更：", message.setting, message.value);
+
+            chrome.runtime.sendMessage({
+                type:"lyricDisplaySettingChanged",
+                setting:message.setting,
+                value:message.value});
+
+            return;
+        }
+        // ========================================
         // 設定歌詞視窗是否永遠置頂
         // ========================================
-
-        if (
-            message.type ===
-            "setAlwaysOnTop"
-        ) {
-
-            console.log(
-                "📌 設定永遠置頂：",
-                message.value
-            );
-
+        if (message.type === "setAlwaysOnTop"){
+            console.log("📌 設定永遠置頂：", message.value);
 
             // 還沒有歌詞視窗
-            if (
-                lyricsWindowId === null
-            ) {
-
-                console.log(
-                    "❌ 找不到歌詞視窗"
-                );
-
+            if (lyricsWindowId === null){
+                console.log("❌ 找不到歌詞視窗");
                 return;
             }
 
-
             // 更新視窗
             chrome.windows.update(
-
                 lyricsWindowId,
-
                 {
                     alwaysOnTop:
                         message.value
