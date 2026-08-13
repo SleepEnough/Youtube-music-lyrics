@@ -27,6 +27,8 @@ const lineHeightValue = document.querySelector("#lineHeightValue");
 
 const fontWeightControl = document.querySelector("#fontWeight");
 
+const textAlignControl = document.querySelector("#textAlign");
+
 // ========================================
 // 歌詞顯示設定預設值
 // ========================================
@@ -37,6 +39,7 @@ const DEFAULT_LINE_HEIGHT = 1.6;
 
 const DEFAULT_FONT_WEIGHT = 400;
 
+const DEFAULT_TEXT_ALIGN = "center";
 
 // ========================================
 // IndexedDB
@@ -451,100 +454,42 @@ async function restoreFolder() {
 // 重新授權歌詞資料夾
 // ========================================
 
-reconnectFolderButton.addEventListener(
-    "click",
-    async () => {
+reconnectFolderButton.addEventListener("click", async () => {
+    try {
+        console.log("🔓 使用者要求重新授權");
+        // 找回之前保存的資料夾
+        const folderHandle = await loadFolderHandle();
 
-        try {
-
-            console.log(
-                "🔓 使用者要求重新授權"
-            );
-
-
-            // 找回之前保存的資料夾
-            const folderHandle =
-                await loadFolderHandle();
-
-
-            if (!folderHandle) {
-
-                console.log(
-                    "❌ 找不到之前的資料夾"
-                );
-
-                return;
-            }
-
-
-            // ====================================
-            // 這裡可以安全 requestPermission
-            // 因為是使用者點擊按鈕
-            // ====================================
-
-            const permission =
-                await folderHandle.requestPermission({
-                    mode: "read"
-                });
-
-
-            console.log(
-                "🔐 重新取得權限結果：",
-                permission
-            );
-
-
-            // ====================================
-            // 授權成功
-            // ====================================
-
-            if (
-                permission ===
-                "granted"
-            ) {
-
-                console.log(
-                    "✅ 歌詞資料夾重新授權成功"
-                );
-
-
-                folderName.textContent =
-                    "已設定資料夾：" +
-                    folderHandle.name;
-
-
-                // 隱藏按鈕
-                reconnectFolderButton.style.display =
-                    "none";
-
-
-                // 重新讀取歌詞
-                await readLyricsFolder(
-                    folderHandle
-                );
-
-
-            } else {
-
-                console.log(
-                    "❌ 使用者沒有授權歌詞資料夾"
-                );
-
-
-                folderName.textContent =
-                    "⚠️ 尚未取得資料夾權限";
-            }
-
-
-        } catch (error) {
-
-            console.error(
-                "❌ 重新授權失敗：",
-                error
-            );
-
+        if (!folderHandle) {
+            console.log("❌ 找不到之前的資料夾");
+            return;
         }
+        // ====================================
+        // 這裡可以安全 requestPermission
+        // 因為是使用者點擊按鈕
+        // ====================================
+        const permission = await folderHandle.requestPermission({mode: "read"});
 
+        console.log("🔐 重新取得權限結果：", permission);
+        // ====================================
+        // 授權成功
+        // ====================================
+        if (permission === "granted"){
+            console.log("✅ 歌詞資料夾重新授權成功");
+
+            folderName.textContent = "已設定資料夾：" + folderHandle.name;
+            // 隱藏按鈕
+            reconnectFolderButton.style.display = "none";
+            // 重新讀取歌詞
+            await readLyricsFolder(folderHandle);
+            }
+            else{
+                console.log("❌ 使用者沒有授權歌詞資料夾");
+                folderName.textContent = "⚠️ 尚未取得資料夾權限";
+            }
+        } catch (error) {
+            console.error("❌ 重新授權失敗：", error);
+        }
     }
 );
 
@@ -553,227 +498,152 @@ reconnectFolderButton.addEventListener(
 // ========================================
 
 async function loadLyricColor() {
-
     try {
+        const result = await chrome.storage.local.get("lyricColor");
 
-        const result =
-            await chrome.storage.local.get(
-                "lyricColor"
-            );
+        const color = result.lyricColor || "#ff0000";
 
-
-        const color =
-            result.lyricColor ||
-            "#ff0000";
-
-
-        if (lyricColorPicker) {
-
-            lyricColorPicker.value =
-                color;
-
-        }
-
-
-        console.log(
-            "🎨 載入歌詞顏色：",
-            color
-        );
-
-
+        if (lyricColorPicker)
+            lyricColorPicker.value = color;
+        
+        console.log("🎨 載入歌詞顏色：", color);
     } catch (error) {
-
-        console.error(
-            "❌ 載入歌詞顏色失敗：",
-            error
-        );
-
+        console.error("❌ 載入歌詞顏色失敗：", error);
     }
 }
 
 // ========================================
 // 修改歌詞顏色
 // ========================================
-
 if (lyricColorPicker) {
+    lyricColorPicker.addEventListener("change", async () => {
+        const color = lyricColorPicker.value;
 
-    lyricColorPicker.addEventListener(
-        "change",
-        async () => {
+        console.log("🎨 設定歌詞顏色：", color);
 
-            const color =
-                lyricColorPicker.value;
+        await chrome.storage.local.set({lyricColor:color});
 
-
-            console.log(
-                "🎨 設定歌詞顏色：",
-                color
-            );
-
-
-            await chrome.storage.local.set({
-                lyricColor:
-                    color
-            });
-
-            console.log("💾 歌詞顏色已儲存");
-        }
-    );
+        console.log("💾 歌詞顏色已儲存");
+    });
 }
 
 // ========================================
 // 載入歌詞顯示設定
 // ========================================
-
 async function loadLyricDisplaySettings() {
-
     try {
+        const result = await chrome.storage.local.get([
+            "fontSize",
+            "lineHeight",
+            "fontWeight",
+            "textAlign"
+        ]);
 
-        const result =
-            await chrome.storage.local.get([
-                "fontSize",
-                "lineHeight",
-                "fontWeight"
-            ]);
-
-
-        const fontSize =
-            result.fontSize ??
-            DEFAULT_FONT_SIZE;
-
-
-        const lineHeight =
-            result.lineHeight ??
-            DEFAULT_LINE_HEIGHT;
-
-
-        const fontWeight =
-            result.fontWeight ??
-            DEFAULT_FONT_WEIGHT;
-
+        const fontSize = result.fontSize ?? DEFAULT_FONT_SIZE;
+        const lineHeight = result.lineHeight ?? DEFAULT_LINE_HEIGHT;
+        const fontWeight = result.fontWeight ?? DEFAULT_FONT_WEIGHT;
+        const textAlign = result.textAlign ?? DEFAULT_TEXT_ALIGN;
 
         // ================================
         // 更新 UI
         // ================================
 
-        if (fontSizeControl) {
+        if (fontSizeControl)
+            fontSizeControl.value = fontSize;
 
-            fontSizeControl.value =
-                fontSize;
+        if (fontSizeValue)
+            fontSizeValue.textContent = fontSize + "px";
 
-        }
+        if (lineHeightControl)
+            lineHeightControl.value = lineHeight;
 
+        if (lineHeightValue)
+            lineHeightValue.textContent = lineHeight;
 
-        if (fontSizeValue) {
+        if (fontWeightControl)
+            fontWeightControl.value = fontWeight;
 
-            fontSizeValue.textContent =
-                fontSize + "px";
+        if(textAlignControl)
+            textAlign.value = textAlign;
 
-        }
-
-
-        if (lineHeightControl) {
-
-            lineHeightControl.value =
-                lineHeight;
-
-        }
-
-
-        if (lineHeightValue) {
-
-            lineHeightValue.textContent =
-                lineHeight;
-
-        }
-
-
-        if (fontWeightControl) {
-
-            fontWeightControl.value =
-                fontWeight;
-
-        }
-
-
-        console.log(
-            "🔤 歌詞顯示設定：",
+        console.log("🔤 歌詞顯示設定：",
             {
                 fontSize,
                 lineHeight,
-                fontWeight
-            }
-        );
+                fontWeight,
+                textAlign
+            });
     } catch (error) {
         console.error("❌ 讀取歌詞顯示設定失敗：", error);
     }
 }
 
 if (fontSizeControl) {
+    fontSizeControl.addEventListener("input", async () => {
+        const value = Number(fontSizeControl.value);
 
-    fontSizeControl.addEventListener(
-        "input",
-        async () => {
+        fontSizeValue.textContent = value + "px";
 
-            const value = Number(fontSizeControl.value);
+        console.log("🔤 字體大小：", value);
 
-            fontSizeValue.textContent = value + "px";
+        await chrome.storage.local.set({fontSize: value});
 
-            console.log("🔤 字體大小：", value);
-
-            await chrome.storage.local.set({fontSize: value});
-
-            chrome.runtime.sendMessage({
-                type: "lyricDisplaySettingChanged",
-                setting: "fontSize",
-                value: value
-            });
-        }
-    );
+        chrome.runtime.sendMessage({
+            type: "lyricDisplaySettingChanged",
+            setting: "fontSize",
+            value: value
+        });
+    });
 }
 
-if (lineHeightControl) {
+if (lineHeightControl){
+    lineHeightControl.addEventListener("input", async () => {
+        const value = Number(lineHeightControl.value);
 
-    lineHeightControl.addEventListener(
-        "input",
-        async () => {
+        lineHeightValue.textContent = value;
+        
+        console.log("↕️ 歌詞行距：", value);
 
-            const value = Number(lineHeightControl.value);
+        await chrome.storage.local.set({lineHeight: value});
 
-            lineHeightValue.textContent = value;
-            
-            console.log("↕️ 歌詞行距：", value);
-
-            await chrome.storage.local.set({lineHeight: value});
-
-            chrome.runtime.sendMessage({
-                type:"lyricDisplaySettingChanged",
-                setting:"lineHeight",
-                value:value
-            });
-        }
-    );
+        chrome.runtime.sendMessage({
+            type:"lyricDisplaySettingChanged",
+            setting:"lineHeight",
+            value:value
+        });
+    });
 }
 
 if (fontWeightControl) {
+    fontWeightControl.addEventListener("change", async () => {
+        const value =Number(fontWeightControl.value);
 
-    fontWeightControl.addEventListener(
-        "change",
-        async () => {
+        console.log("🅱️ 歌詞粗細：", value);
 
-            const value =Number(fontWeightControl.value);
+        await chrome.storage.local.set({fontWeight: value});
+        
+        chrome.runtime.sendMessage({
+            type:"lyricDisplaySettingChanged",
+            setting:"fontWeight",
+            value:value
+        });
+    });
+}
 
-            console.log("🅱️ 歌詞粗細：", value);
+if (textAlignControl) {
+    textAlignControl.addEventListener("change", async () => {
+        const value = textAlignControl.value;
 
-            await chrome.storage.local.set({fontWeight: value});
-            
-            chrome.runtime.sendMessage({
-                type:"lyricDisplaySettingChanged",
-                setting:"fontWeight",
-                value:value
-            });
-        }
-    );
+        await chrome.storage.local.set({textAlign: value});
+
+        console.log("↔️ 歌詞文字對齊：", value);
+
+        chrome.runtime.sendMessage({
+            type:"lyricDisplaySettingChanged",
+            setting:"textAlign",
+            value:value
+        });
+    });
 }
 
 // 啟動

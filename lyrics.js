@@ -2,56 +2,37 @@
 // YTM Lyrics
 // 歌詞視窗
 // ========================================
-
-console.log(
-    "🪟 lyrics.js 已載入"
-);
-
-
+console.log("🪟 lyrics.js 已載入");
 // ========================================
 // 記錄目前播放的歌詞
 // ========================================
-//
 // 很重要！
-//
 // 就算歌詞畫面重新建立，
 // 我們仍然知道目前播放到哪一句。
 // ========================================
-
 let currentLyric = null;
-
 // ========================================
 // 使用者是否正在手動捲動
 // ========================================
-
 let userScrolling = false;
-
 // ========================================
 // 程式是否正在自動捲動
 // ========================================
-
 let autoScrolling = false;
-
 // ========================================
 // 目前歌詞顏色
 // ========================================
-
 let lyricColor = "#ff0000";
-
 // ========================================
 // 歌詞顯示設定
 // ========================================
-
 let lyricFontSize = 18;
-
 let lyricLineHeight = 1.6;
-
 let lyricFontWeight = 400;
-
+let lyricTextAlign = "center";
 // ========================================
 // 接收 Background 傳來的訊息
 // ========================================
-
 chrome.runtime.onMessage.addListener((message) => {
     console.log("📨 歌詞視窗收到訊息：", message.type);
     // ====================================
@@ -95,6 +76,9 @@ chrome.runtime.onMessage.addListener((message) => {
         if (message.setting === "fontWeight")
             lyricFontWeight = Number(message.value);
 
+        if (message.setting === "textAlign")
+            lyricTextAlign = message.value;
+
         applyLyricDisplaySettings();
     }
 });
@@ -103,37 +87,21 @@ chrome.runtime.onMessage.addListener((message) => {
 // 顯示整份歌詞
 // ========================================
 
-async function showLyrics(
-    lyrics
-) {
+async function showLyrics(lyrics){
 
     await loadLyricDisplaySettings();
 
-    const lyricsElement =
-        document.querySelector(
-            "#lyrics"
-        );
-
-
+    const lyricsElement = document.querySelector("#lyrics");
     // 如果找不到歌詞容器
     if (!lyricsElement) {
-
-        console.error(
-            "❌ 找不到 #lyrics"
-        );
-
+        console.error("❌ 找不到 #lyrics");
         return;
     }
-
-
     // 清空原本內容
     lyricsElement.innerHTML = "";
-
-
     // ====================================
     // 一句一句建立歌詞
     // ====================================
-
     for (
         const lyric of lyrics
     ) {
@@ -151,18 +119,13 @@ async function showLyrics(
 
         // 把時間存進 HTML
         line.dataset.time = lyric.time;
-
         line.style.fontSize = lyricFontSize + "px";
-
         line.style.fontWeight = lyricFontWeight;
-
         line.style.lineHeight = lyricLineHeight;
-
+        line.style.textAlign = lyricTextAlign;
 
         // 加入歌詞視窗
-        lyricsElement.appendChild(
-            line
-        );
+        lyricsElement.appendChild(line);
     }
 
 
@@ -260,6 +223,7 @@ function highlightCurrentLyric(
             line.style.color = lyricColor;
             line.style.fontWeight = lyricFontWeight;
             line.style.fontSize = lyricFontSize + "px";
+            line.style.textAlign = lyricTextAlign;
 
             // ====================================
             // 自動捲動
@@ -657,18 +621,11 @@ function checkAutoScrollResume() {
 async function loadLyricColor() {
 
     try {
+        const result = await chrome.storage.local.get("lyricColor");
 
-        const result =
-            await chrome.storage.local.get(
-                "lyricColor"
-            );
-
-
-        if (result.lyricColor) {
-            lyricColor =
-                result.lyricColor;
+        if (result.lyricColor){
+            lyricColor = result.lyricColor;
         }
-
         console.log("🎨 目前歌詞顏色：", lyricColor);
     } catch (error) {
         console.error("❌ 讀取歌詞顏色失敗：", error);
@@ -682,43 +639,29 @@ async function loadLyricColor() {
 async function loadLyricDisplaySettings() {
 
     try {
-
         const result =
             await chrome.storage.local.get([
                 "fontSize",
                 "lineHeight",
-                "fontWeight"
+                "fontWeight",
+                "textAlign"
             ]);
 
+        lyricFontSize = result.fontSize ?? 18;
 
-        lyricFontSize =
-            result.fontSize ??
-            18;
+        lyricLineHeight = result.lineHeight ?? 1.6;
 
+        lyricFontWeight = result.fontWeight ?? 400;
 
-        lyricLineHeight =
-            result.lineHeight ??
-            1.6;
+        lyricTextAlign = result.textAlign ?? "center";
 
-
-        lyricFontWeight =
-            result.fontWeight ??
-            400;
-
-
-        console.log(
-            "🔤 歌詞顯示設定已載入：",
+        console.log("🔤 歌詞顯示設定已載入：",
             {
-                fontSize:
-                    lyricFontSize,
-
-                lineHeight:
-                    lyricLineHeight,
-
-                fontWeight:
-                    lyricFontWeight
-            }
-        );
+                fontSize:lyricFontSize,
+                lineHeight:lyricLineHeight,
+                fontWeight:lyricFontWeight,
+                textAlign:lyricTextAlign
+            });
     } catch (error) {
         console.error("❌ 載入歌詞顯示設定失敗：", error);
     }
@@ -738,6 +681,7 @@ function applyLyricDisplaySettings() {
         line.style.fontSize = lyricFontSize + "px";
         line.style.lineHeight = lyricLineHeight;
         line.style.fontWeight = lyricFontWeight;
+        line.style.textAlign = lyricTextAlign;
     }
 
     // ====================================
