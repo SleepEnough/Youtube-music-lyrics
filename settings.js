@@ -572,7 +572,7 @@ async function loadLyricDisplaySettings() {
             fontWeightControl.value = fontWeight;
 
         if(textAlignControl)
-            textAlign.value = textAlign;
+            textAlignControl.value = textAlign;
 
         if (backgroundOpacityControl)
         backgroundOpacityControl.value = backgroundOpacity;

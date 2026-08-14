@@ -95,14 +95,11 @@ async function saveLyricsWindowPosition(
         top
     );
 
-
     await chrome.storage.local.set({
 
         lyricsWindowPosition: {
-
             left:
                 left,
-
             top:
                 top
         }
@@ -674,66 +671,33 @@ chrome.runtime.onMessage.addListener(
                 message.deltaY
             );
 
-
             // ====================================
             // 確認歌詞視窗 ID
             // ====================================
-
-            console.log(
-                "🪟 目前歌詞視窗 ID：",
-                lyricsWindowId
-            );
-
+            console.log("🪟 目前歌詞視窗 ID：", lyricsWindowId);
 
             // 如果沒有視窗 ID
-            if (
-                lyricsWindowId === null
-            ) {
-
-                console.error(
-                    "❌ lyricsWindowId 是 null"
-                );
-
+            if (lyricsWindowId === null) {
+                console.error("❌ lyricsWindowId 是 null");
                 return;
             }
-
 
             // ====================================
             // 取得目前視窗
             // ====================================
-
-            chrome.windows.get(
-                lyricsWindowId
-            )
+            chrome.windows.get(lyricsWindowId)
             .then((window) => {
-
-                console.log(
-                    "🪟 目前視窗位置：",
+                console.log("🪟 目前視窗位置：",
                     window.left,
-                    window.top
-                );
-
+                    window.top);
 
                 // ====================================
                 // 計算新位置
                 // ====================================
+                const newLeft = window.left + message.deltaX;
+                const newTop = window.top + message.deltaY;
 
-                const newLeft =
-                    window.left +
-                    message.deltaX;
-
-
-                const newTop =
-                    window.top +
-                    message.deltaY;
-
-
-                console.log(
-                    "🪟 新位置：",
-                    newLeft,
-                    newTop
-                );
-
+                console.log("🪟 新位置：", newLeft, newTop);
 
                 // ====================================
                 // 移動視窗
@@ -742,25 +706,19 @@ chrome.runtime.onMessage.addListener(
                 return chrome.windows.update(
                     lyricsWindowId,
                     {
-
-                        left:
-                            newLeft,
-
-                        top:
-                            newTop
-
+                        left: newLeft,
+                        top: newTop
                     }
                 ).then(() => {
-
-                    console.log(
-                        "✅ 歌詞視窗移動成功"
-                    );
-                
+                    console.log("✅ 歌詞視窗移動成功");
                 
                     // 儲存目前位置
-                    return saveLyricsWindowPosition(
-                        newLeft,
-                        newTop
+                    return chrome.windows.update(
+                        lyricsWindowId,
+                        {
+                            left: newLeft,
+                            top: newTop
+                        }
                     );
                 })
             })
@@ -913,7 +871,6 @@ chrome.runtime.onMessage.addListener(
 
             });
 
-
             return;
         }
 
@@ -1064,14 +1021,9 @@ chrome.windows.onBoundsChanged.addListener(
     (window) => {
 
         // 不是歌詞視窗
-        if (
-            window.id !==
-            lyricsWindowId
-        ) {
-
+        if (window.id !== lyricsWindowId) {
             return;
         }
-
 
         console.log(
             "📐 歌詞視窗大小/位置改變：",
@@ -1085,14 +1037,17 @@ chrome.windows.onBoundsChanged.addListener(
             window.height
         );
 
-
         // ====================================
         // 儲存視窗大小
         // ====================================
-
         saveLyricsWindowSize(
             window.width,
             window.height
+        );
+
+        saveLyricsWindowPosition(
+            window.left,
+            window.top
         );
 
     }

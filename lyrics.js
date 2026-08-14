@@ -3,6 +3,7 @@
 // 歌詞視窗
 // ========================================
 console.log("🪟 lyrics.js 已載入");
+
 // ========================================
 // 記錄目前播放的歌詞
 // ========================================
@@ -11,18 +12,27 @@ console.log("🪟 lyrics.js 已載入");
 // 我們仍然知道目前播放到哪一句。
 // ========================================
 let currentLyric = null;
+
 // ========================================
 // 使用者是否正在手動捲動
 // ========================================
 let userScrolling = false;
+
 // ========================================
 // 程式是否正在自動捲動
 // ========================================
 let autoScrolling = false;
+
+// ========================================
+// 自動捲動計時器
+// ========================================
+let autoScrollTimer = null;
+
 // ========================================
 // 目前歌詞顏色
 // ========================================
 let lyricColor = "#ff0000";
+
 // ========================================
 // 歌詞顯示設定
 // ========================================
@@ -31,6 +41,7 @@ let lyricLineHeight = 1.6;
 let lyricFontWeight = 400;
 let lyricTextAlign = "center";
 let backgroundOpacity = 100;
+
 // ========================================
 // 接收 Background 傳來的訊息
 // ========================================
@@ -164,9 +175,7 @@ async function showLyrics(lyrics){
 // 標示目前播放的歌詞
 // ========================================
 
-function highlightCurrentLyric(
-    lyric
-) {
+function highlightCurrentLyric(lyric){
     // 如果沒有目前歌詞
     if (!lyric)
         return;
@@ -213,9 +222,26 @@ function highlightCurrentLyric(
             // 自動捲動
             // ====================================
             if (!userScrolling) {
+                // ====================================
+                // 清除上一個自動捲動計時器
+                // ====================================
+                if (autoScrollTimer) {
+                    clearTimeout(autoScrollTimer);
+                }
+                
+                // ====================================
+                // 開始自動捲動
+                // ====================================
                 autoScrolling = true;
                 line.scrollIntoView({behavior: "smooth", block: "center"});
-                setTimeout(() => {autoScrolling = false;}, 500);
+
+                // ====================================
+                // 自動捲動完成
+                // ====================================
+                autoScrollTimer = setTimeout(() => {
+                    autoScrolling = false;
+                    autoScrollTimer = null;
+                }, 500);
             }
         }
         // ====================================
@@ -269,173 +295,85 @@ function highlightCurrentLyric(
 // 歌詞視窗拖曳功能
 // ========================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("🪟 開始初始化視窗拖曳功能");
 
-        console.log(
-            "🪟 開始初始化視窗拖曳功能"
-        );
+    // ====================================
+    // 找到控制列
+    // ====================================
+    const titleBar = document.querySelector("#titleBar");
 
+    // 確認控制列是否存在
+    if (!titleBar) {
+        console.error("❌ 找不到 #titleBar");
+        return;
+    }
 
-        // ====================================
-        // 找到控制列
-        // ====================================
+    console.log("✅ 找到 #titleBar");
 
-        const titleBar =
-            document.querySelector(
-                "#titleBar"
-            );
+    // ====================================
+    // 拖曳狀態
+    // ====================================
+    let isDragging = false;
 
+    // 滑鼠上一個位置
+    let startMouseX = 0;
+    let startMouseY = 0;
 
-        // 確認控制列是否存在
-        if (!titleBar) {
+    // ====================================
+    // 開始拖曳
+    // ====================================
+    titleBar.addEventListener("mousedown", (event) => {
+        console.log("🖱️ 開始拖曳");
+        isDragging = true;
+        startMouseX = event.screenX;
+        startMouseY = event.screenY;
+    });
 
-            console.error(
-                "❌ 找不到 #titleBar"
-            );
-
+    // ====================================
+    // 滑鼠移動
+    // ====================================
+    document.addEventListener("mousemove", (event) => {
+        // 沒有拖曳就不處理
+        if (!isDragging){
             return;
         }
 
+        // 計算移動距離
+        const deltaX = event.screenX - startMouseX;
+        const deltaY = event.screenY - startMouseY;
 
-        console.log(
-            "✅ 找到 #titleBar"
-        );
+        console.log("🖱️ 移動：", deltaX, deltaY);
 
-
-        // ====================================
-        // 拖曳狀態
-        // ====================================
-
-        let isDragging =
-            false;
-
-
-        // 滑鼠上一個位置
-        let startMouseX =
-            0;
-
-        let startMouseY =
-            0;
-
+        // 更新滑鼠位置
+        startMouseX = event.screenX;
+        startMouseY = event.screenY;
 
         // ====================================
-        // 開始拖曳
+        // 傳給 Background
         // ====================================
+        chrome.runtime.sendMessage({
+            type:"moveLyricsWindow",
+            deltaX:deltaX,
+            deltaY:deltaY});
+    });
 
-        titleBar.addEventListener(
-            "mousedown",
-            (event) => {
+    // ====================================
+    // 滑鼠放開
+    // ====================================
+    document.addEventListener("mouseup", () => {
+        if (!isDragging) {
+            return;
+        }
 
-                console.log(
-                    "🖱️ 開始拖曳"
-                );
+        console.log("🖱️ 結束拖曳");
+        
+        isDragging = false;
 
-
-                isDragging =
-                    true;
-
-
-                startMouseX =
-                    event.screenX;
-
-                startMouseY =
-                    event.screenY;
-
-            }
-        );
-
-
-        // ====================================
-        // 滑鼠移動
-        // ====================================
-
-        document.addEventListener(
-            "mousemove",
-            (event) => {
-
-                // 沒有拖曳就不處理
-                if (!isDragging) {
-
-                    return;
-                }
-
-
-                // 計算移動距離
-                const deltaX =
-                    event.screenX -
-                    startMouseX;
-
-
-                const deltaY =
-                    event.screenY -
-                    startMouseY;
-
-
-                console.log(
-                    "🖱️ 移動：",
-                    deltaX,
-                    deltaY
-                );
-
-
-                // 更新滑鼠位置
-                startMouseX =
-                    event.screenX;
-
-                startMouseY =
-                    event.screenY;
-
-
-                // ====================================
-                // 傳給 Background
-                // ====================================
-
-                chrome.runtime.sendMessage({
-
-                    type:
-                        "moveLyricsWindow",
-
-                    deltaX:
-                        deltaX,
-
-                    deltaY:
-                        deltaY
-
-                });
-
-            }
-        );
-
-
-        // ====================================
-        // 滑鼠放開
-        // ====================================
-
-        document.addEventListener(
-            "mouseup",
-            () => {
-
-                if (!isDragging) {
-
-                    return;
-                }
-
-
-                console.log(
-                    "🖱️ 結束拖曳"
-                );
-
-
-                isDragging =
-                    false;
-
-            }
-        );
-
-    }
-);
+        chrome.runtime.sendMessage({
+            type:"saveLyricsWindowPosition",});
+        });
+});
 
 // ========================================
 // 偵測使用者手動捲動歌詞
@@ -448,40 +386,25 @@ document.querySelector(
 
 
 if (lyricsElement) {
+    lyricsElement.addEventListener("scroll", () => {
+        // ====================================
+        // 程式自己捲動
+        // ====================================
+        if (autoScrolling)
+            return;
 
-    lyricsElement.addEventListener(
-        "scroll",
-        () => {
+        // ====================================
+        // 使用者手動捲動
+        // ====================================
+        console.log("🖱️ 使用者正在手動捲動歌詞");
 
-            // ====================================
-            // 程式自己捲動
-            // ====================================
+        userScrolling = true;
 
-            if (autoScrolling) {
-
-                return;
-            }
-
-
-            // ====================================
-            // 使用者手動捲動
-            // ====================================
-
-            console.log(
-                "🖱️ 使用者正在手動捲動歌詞"
-            );
-
-
-            userScrolling =
-                true;
-
-
-            // ====================================
-            // 檢查目前歌詞是否已經回到附近
-            // ====================================
-            checkAutoScrollResume();
-        }
-    );
+        // ====================================
+        // 檢查目前歌詞是否已經回到附近
+        // ====================================
+        checkAutoScrollResume();
+    });
 }
 
 // ========================================
