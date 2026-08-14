@@ -167,43 +167,22 @@ async function showLyrics(lyrics){
 function highlightCurrentLyric(
     lyric
 ) {
-
     // 如果沒有目前歌詞
-    if (!lyric) {
-
+    if (!lyric)
         return;
-    }
 
-
-    console.log(
-        "🎯 開始標示目前歌詞：",
-        lyric
-    );
-
+    console.log("🎯 開始標示目前歌詞：", lyric);
 
     // 找到所有歌詞
-    const lines =
-        document.querySelectorAll(
-            "#lyrics div"
-        );
+    const lines = document.querySelectorAll("#lyrics div");
 
-
-    console.log(
-        "🔎 找到歌詞元素：",
-        lines.length
-    );
-
+    console.log("🔎 找到歌詞元素：", lines.length);
 
     // 如果歌詞還沒建立
     if (lines.length === 0) {
-
-        console.log(
-            "⏳ 歌詞元素還沒建立，稍後再套用"
-        );
-
+        console.log("⏳ 歌詞元素還沒建立，稍後再套用");
         return;
     }
-
 
     // 一句一句檢查
     for (const line of lines) {
@@ -248,6 +227,7 @@ function highlightCurrentLyric(
             line.style.color = "";
             line.style.fontWeight = lyricFontWeight;
             line.style.fontSize = lyricFontSize + "px";
+            line.style.textAlign = lyricTextAlign;
         }
     }
 }
