@@ -373,6 +373,78 @@ document.addEventListener("DOMContentLoaded", () => {
         chrome.runtime.sendMessage({
             type:"saveLyricsWindowPosition",});
         });
+    
+    // ====================================
+    // 歌詞視窗載入後
+    // 主動向 Background 要目前資料
+    // ====================================
+
+    console.log(
+        "📨 歌詞視窗要求目前歌詞資料"
+    );
+
+    chrome.runtime.sendMessage({
+        type:
+            "requestLyrics"
+    })
+    .then(async (response) => {
+
+        console.log(
+            "📥 收到 Background 目前資料：",
+            response
+        );
+
+        // ====================================
+        // 載入完整歌詞
+        // ====================================
+        if (
+            response &&
+            response.lyrics &&
+            response.lyrics.length > 0
+        ) {
+
+            console.log(
+                "🎵 載入目前歌詞，共",
+                response.lyrics.length,
+                "句"
+            );
+            
+            await showLyrics(response.lyrics);
+        }
+
+        // ====================================
+        // 載入目前播放歌詞
+        // ====================================
+
+        if (
+            response &&
+            response.currentLyric
+        ) {
+
+            console.log(
+                "🎯 載入目前播放歌詞：",
+                response.currentLyric
+            );
+
+
+            currentLyric =
+                response.currentLyric;
+
+
+            highlightCurrentLyric(
+                currentLyric
+            );
+        }
+
+    })
+    .catch((error) => {
+
+        console.error(
+            "❌ 要求目前歌詞資料失敗：",
+            error
+        );
+
+    });
 });
 
 // ========================================

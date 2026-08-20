@@ -527,137 +527,126 @@ async function findLyricsFile(fileName)
 // ========================================
 
 chrome.runtime.onMessage.addListener(
-    (message, sender, sendResponse) => {
+    async (message, sender, sendResponse) => {
 
         console.log("📨 Background 收到訊息：",message);
 
         // ========================================
         // 開啟歌詞視窗
         // ========================================
-        if (message.type === "openLyricsWindow"){
-            // ====================================
-            // 同時讀取：
-            //
-            // ① 上次位置
-            // ② 上次大小
-            // ====================================
-            Promise.all([
-                loadLyricsWindowPosition(),
-                loadLyricsWindowSize()
-            ]).then(
-                ([position, size]) => {
-                    console.log("📍 上次位置：", position);
 
-                    console.log("📐 上次大小：", size);
+        if (
+            message.type ===
+            "openLyricsWindow"
+        ) {
 
-                    // ====================================
-                    // 建立預設視窗設定
-                    // ====================================
-                    const windowOptions = {
-                        url:
-                            chrome.runtime.getURL(
-                                "lyrics.html"
-                            ),
-
-                        type:
-                            "popup",
-
-                        width:
-                            500,
-
-                        height:
-                            700
-
-                    };
-
-
-                    // ====================================
-                    // 套用上次位置
-                    // ====================================
-
-                    if (position) {
-
-                        console.log(
-                            "📍 套用上次位置"
-                        );
-
-
-                        windowOptions.left =
-                            position.left;
-
-                        windowOptions.top =
-                            position.top;
-                    }
-
-
-                    // ====================================
-                    // 套用上次大小
-                    // ====================================
-
-                    if (size) {
-
-                        console.log(
-                            "📐 套用上次大小"
-                        );
-
-
-                        windowOptions.width =
-                            size.width;
-
-                        windowOptions.height =
-                            size.height;
-                    }
-
-
-                    // ====================================
-                    // 建立歌詞視窗
-                    // ====================================
-
-                    return chrome.windows.create(
-                        windowOptions
-                    );
-
-                }
-            ).then(
-                (window) => {
-                    // 記住歌詞視窗 ID
-                    lyricsWindowId =
-                        window.id;
-
-                    console.log(
-                        "🪟 歌詞視窗已建立，ID：",
-                        lyricsWindowId
-                    );
-
-
-                    console.log(
-                        "📍 目前位置：",
-                        window.left,
-                        window.top
-                    );
-
-
-                    console.log(
-                        "📐 目前大小：",
-                        window.width,
-                        window.height
-                    );
-
-                }
-            )
-
-            .catch(
-                (error) => {
-
-                    console.error(
-                        "❌ 建立歌詞視窗失敗：",
-                        error
-                    );
-
-                }
+            console.log(
+                "🪟 收到開啟歌詞視窗要求"
             );
 
 
+            // ====================================
+            // 已經有歌詞視窗
+            // ====================================
+
+            if (
+                lyricsWindowId !== null
+            ) {
+
+                try {
+                    const existingWindow = await chrome.windows.get(lyricsWindowId);
+
+                    console.log("♻️ 已存在歌詞視窗，沿用 ID：", lyricsWindowId);
+
+                    // ====================================
+                    // 將現有視窗帶到前面
+                    // ====================================
+                    await chrome.windows.update(lyricsWindowId, {focused: true});
+
+                    return;
+                } catch (error) {
+
+                    console.log("⚠️ 原歌詞視窗已不存在，準備重新建立");
+
+                    // 清除失效 ID
+                    lyricsWindowId = null;
+                }
+            }
+            // ====================================
+            // 讀取上次位置與大小
+            // ====================================
+            try {
+                const [position, size] = await Promise.all([
+                    loadLyricsWindowPosition(),
+                    loadLyricsWindowSize()]);
+
+                console.log("📍 上次位置：", position);
+                console.log("📐 上次大小：", size);
+
+                // ====================================
+                // 建立預設視窗設定
+                // ====================================
+                const windowOptions = {
+                    url:
+                        chrome.runtime.getURL("lyrics.html"),
+                    type:
+                        "popup",
+                    width:
+                        500,
+                    height:
+                        700
+                };
+
+                // ====================================
+                // 套用上次位置
+                // ====================================
+                if (position) {
+                    console.log("📍 套用上次位置");
+
+                    windowOptions.left = position.left;
+                    windowOptions.top = position.top;
+                }
+
+                // ====================================
+                // 套用上次大小
+                // ====================================
+                if (size) {
+                    console.log("📐 套用上次大小");
+
+                    windowOptions.width = size.width;
+                    windowOptions.height = size.height;
+                }
+
+                // ====================================
+                // 建立歌詞視窗
+                // ====================================
+                const newWindow = await chrome.windows.create(windowOptions);
+
+                // ====================================
+                // 記住歌詞視窗 ID
+                // ====================================
+                lyricsWindowId = newWindow.id;
+
+                console.log("🆕 歌詞視窗已建立，ID：", lyricsWindowId);
+
+                console.log(
+                    "📍 目前位置：",
+                    newWindow.left,
+                    newWindow.top
+                );
+
+
+                console.log(
+                    "📐 目前大小：",
+                    newWindow.width,
+                    newWindow.height
+                );
+            } catch (error) {
+                console.error(
+                    "❌ 建立歌詞視窗失敗：",
+                    error
+                );
+            }
             return;
         }
 
@@ -711,15 +700,6 @@ chrome.runtime.onMessage.addListener(
                     }
                 ).then(() => {
                     console.log("✅ 歌詞視窗移動成功");
-                
-                    // 儲存目前位置
-                    return chrome.windows.update(
-                        lyricsWindowId,
-                        {
-                            left: newLeft,
-                            top: newTop
-                        }
-                    );
                 })
             })
             .catch((error) => {
@@ -1048,6 +1028,38 @@ chrome.windows.onBoundsChanged.addListener(
         saveLyricsWindowPosition(
             window.left,
             window.top
+        );
+
+    }
+);
+
+// ========================================
+// 偵測歌詞視窗被關閉
+// ========================================
+
+chrome.windows.onRemoved.addListener(
+    (windowId) => {
+        // 不是目前歌詞視窗
+        if (
+            windowId !==
+            lyricsWindowId
+        ) {
+            return;
+        }
+
+        console.log(
+            "🗑️ 歌詞視窗已關閉：",
+            windowId
+        );
+
+
+        // 清除歌詞視窗 ID
+        lyricsWindowId =
+            null;
+
+
+        console.log(
+            "🧹 lyricsWindowId 已清除"
         );
 
     }
