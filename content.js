@@ -6,7 +6,6 @@
 // ========================================
 // 請 Background 開啟歌詞視窗
 // ========================================
-
 function openLyricsWindow() {
 
     chrome.runtime.sendMessage({
@@ -21,30 +20,31 @@ function openLyricsWindow() {
 // ========================================
 // 記錄上一首歌曲
 // ========================================
-
 let lastSongTitle = "";
 
 
 // ========================================
 // 記錄目前是哪一句歌詞
 // ========================================
-
 let lastLyric = null;
 
 
 // ========================================
 // 目前正在使用的歌詞
 // ========================================
-
 let currentLyrics = [];
 
 
 // ========================================
 // 目前正在載入哪首歌
 // ========================================
-
 let loadedSongTitle = "";
 
+
+// ========================================
+// 給每次載入歌詞一個「編號」
+// ========================================
+let lyricsLoadId = 0;
 
 // ========================================
 // 取得目前歌曲資訊
@@ -276,111 +276,84 @@ function findCurrentLyric(
 // 向 Background 取得歌詞
 // ========================================
 
-async function loadLyricsForSong(
-    songTitle
-) {
-
+async function loadLyricsForSong(songTitle) {
+    const thisLoadId = ++lyricsLoadId;
     console.log(
-        "🔍 正在尋找歌詞：",
-        songTitle
-    );
-
+        "🔍 正在尋找歌詞：", songTitle,
+        "Load ID", thisLoadId);
 
     try {
-
         // 傳訊息給 background.js
-        const response =
-            await chrome.runtime.sendMessage({
+        const response = await chrome.runtime.sendMessage({
+            type:"searchLyrics",
+            songTitle: songTitle
+        });
 
-                type:
-                    "searchLyrics",
+        // ⭐⭐⭐ 非常重要
+        // 如果這不是最新一次的載入，就丟掉
+        if (thisLoadId !== lyricsLoadId) {
 
-                songTitle:
-                    songTitle
-            });
+            console.log(
+                "⚠️ 舊歌詞載入結果，忽略：",
+                songTitle,
+                "Load ID：",
+                thisLoadId
+            );
 
+            return;
+        }
 
         // ====================================
         // 找不到
         // ====================================
-
-        if (
-            !response ||
-            !response.success
-        ) {
-
-            console.log(
-                "❌ 找不到對應歌詞：",
-                songTitle
-            );
-
-
+        if (!response || !response.success) {
+            console.log("❌ 找不到對應歌詞：",songTitle);
             currentLyrics = [];
-
             loadedSongTitle = "";
 
             return;
         }
 
-
         // ====================================
         // 找到了
         // ====================================
-
-        console.log(
-            "🎵 找到歌詞檔：",
-            response.fileName
-        );
-
+        console.log("🎵 找到歌詞檔：", response.fileName);
 
         // ====================================
         // 解析 LRC
         // ====================================
+        currentLyrics = parseLRC(response.text);
 
-        currentLyrics =
-            parseLRC(
-                response.text
-            );
-
-        console.log(
-            "📖 LRC 原始文字長度：",
-            response.text?.length
-        );
+        // console.log(
+        //     "📖 LRC 原始文字長度：",
+        //     response.text?.length
+        // );
         
-        console.log(
-            "📖 LRC 原始內容前 200 字：",
-            response.text?.substring(0, 200)
-        );
+        // console.log(
+        //     "📖 LRC 原始內容前 200 字：",
+        //     response.text?.substring(0, 200)
+        // );
 
-
-        console.log(
-            "🎵 歌詞解析完成，共",
-            currentLyrics.length,
-            "句"
-        );
+        console.log("🎵 歌詞解析完成，共", currentLyrics.length, "句");
 
         // 把歌詞傳給歌詞視窗
         sendLyricsToWindow();
 
         // 記錄目前歌曲
-        loadedSongTitle =
-            songTitle;
-
+        loadedSongTitle = songTitle;
 
         // 清除上一句
         lastLyric = null;
-
-
     } catch (error) {
 
-        console.error(
-            "❌ 載入歌詞失敗：",
-            error
-        );
+        console.error("❌ 載入歌詞失敗：", error);
 
+        // 如果已經不是最新請求，不處理
+        if (thisLoadId !== lyricsLoadId) {
+            return;
+        }
 
         currentLyrics = [];
-
         loadedSongTitle = "";
     }
 }
@@ -389,91 +362,75 @@ async function loadLyricsForSong(
 // 每0.1秒檢查一次
 // ========================================
 
-setInterval(
-    async () => {
+setInterval(async () => {
+    // 取得歌曲
+    const song = getSongInfo();
 
-        // 取得歌曲
-        const song =
-            getSongInfo();
+    // 如果歌曲資料還沒準備好
+    if (!song) {
+        return;
+    }
+
+    // ====================================
+    // 偵測換歌
+    // ====================================
+    if (song.title !== lastSongTitle) {
+        // 記錄新歌曲
+        lastSongTitle =song.title;
+
+        // 清除上一首歌曲的歌詞
+        currentLyrics = [];
+        lastLyric = null;
+
+        console.log("🎵 找到新歌曲：", song.title);
+
+        // ⭐ 通知 Background 清除上一首的目前歌詞
+        chrome.runtime.sendMessage({
+            type: "songChanged"
+        });
+
+        // 開啟歌詞視窗
+        openLyricsWindow();
+
+        // 載入這首歌的 LRC
+        await loadLyricsForSong(song.title);
+    }
 
 
-        // 如果歌曲資料還沒準備好
-        if (!song) {
-            return;
-        }
+    // ====================================
+    // 找目前歌詞
+    // ====================================
+
+    const currentLyric =
+        findCurrentLyric(
+            song.currentTime,
+            currentLyrics
+        );
 
 
-        // ====================================
-        // 偵測換歌
-        // ====================================
+    // 如果找到歌詞
+    if (currentLyric) {
 
+        // 如果跟上一句不同
         if (
-            song.title !==
-            lastSongTitle
+            !lastLyric ||
+            currentLyric.time !==
+            lastLyric.time
         ) {
-
-            // 記錄新歌曲
-            lastSongTitle =
-                song.title;
-
-
-            // 清除上一首歌曲的歌詞
-            currentLyrics = [];
-
-            lastLyric = null;
-
+            lastLyric =
+                currentLyric;
 
             console.log(
-                "🎵 找到新歌曲：",
-                song.title
+                "🎵 目前歌詞：",
+                currentLyric.text
             );
 
-            // 開啟歌詞視窗
-            openLyricsWindow();
-
-            // 載入這首歌的 LRC
-            await loadLyricsForSong(
-                song.title
+            // 傳送目前歌詞給歌詞視窗
+            sendCurrentLyricToWindow(
+                currentLyric
             );
         }
-
-
-        // ====================================
-        // 找目前歌詞
-        // ====================================
-
-        const currentLyric =
-            findCurrentLyric(
-                song.currentTime,
-                currentLyrics
-            );
-
-
-        // 如果找到歌詞
-        if (currentLyric) {
-
-            // 如果跟上一句不同
-            if (
-                !lastLyric ||
-                currentLyric.time !==
-                lastLyric.time
-            ) {
-                lastLyric =
-                    currentLyric;
-
-                console.log(
-                    "🎵 目前歌詞：",
-                    currentLyric.text
-                );
-
-                // 傳送目前歌詞給歌詞視窗
-                sendCurrentLyricToWindow(
-                    currentLyric
-                );
-            }
-        }
-
-    },
+    }},
     100
 );
 

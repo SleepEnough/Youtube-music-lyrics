@@ -687,4 +687,78 @@ function applyBackgroundOpacity() {
     await loadLyricColor();
     await loadLyricDisplaySettings();
     applyBackgroundOpacity();
-})();
+});
+
+// ========================================
+// 歌詞視窗載入完成後
+// 要求 Background 提供目前資料
+// ========================================
+
+chrome.runtime.sendMessage({
+
+    type:
+        "requestLyrics"
+
+}).then((response) => {
+
+    console.log(
+        "📨 收到 Background 目前歌詞資料：",
+        response
+    );
+
+
+    // ====================================
+    // 有完整歌詞
+    // ====================================
+
+    if (
+        response &&
+        Array.isArray(response.lyrics) &&
+        response.lyrics.length > 0
+    ) {
+
+        console.log(
+            "🎵 載入目前歌詞，共",
+            response.lyrics.length,
+            "句"
+        );
+
+
+        showLyrics(
+            response.lyrics
+        );
+    }
+
+
+    // ====================================
+    // 有目前播放歌詞
+    // ====================================
+
+    if (
+        response &&
+        response.currentLyric
+    ) {
+
+        console.log(
+            "🎯 載入目前播放歌詞：",
+            response.currentLyric
+        );
+
+
+        currentLyric =
+            response.currentLyric;
+
+
+        highlightCurrentLyric(
+            currentLyric
+        );
+    }
+
+}).catch((error) => {
+
+    console.error(
+        "❌ 無法向 Background 要求目前歌詞：",
+        error
+    );
+
+});
