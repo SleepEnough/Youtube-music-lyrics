@@ -295,7 +295,7 @@ function highlightCurrentLyric(lyric){
 // 歌詞視窗拖曳功能
 // ========================================
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded",async () => {
     console.log("🪟 開始初始化視窗拖曳功能");
 
     // ====================================
@@ -373,30 +373,38 @@ document.addEventListener("DOMContentLoaded", () => {
         chrome.runtime.sendMessage({
             type:"saveLyricsWindowPosition",});
         });
-    
+
     // ====================================
-    // 歌詞視窗載入後
-    // 主動向 Background 要目前資料
+    // 向 Background 要目前歌詞
     // ====================================
 
     console.log(
-        "📨 歌詞視窗要求目前歌詞資料"
+        "🪟 歌詞視窗已載入，要求目前歌詞資料"
     );
 
-    chrome.runtime.sendMessage({
-        type:
-            "requestLyrics"
-    })
-    .then(async (response) => {
+    try {
+
+        const response =
+            await chrome.runtime.sendMessage({
+                type:
+                    "requestLyrics"
+            });
 
         console.log(
-            "📥 收到 Background 目前資料：",
+            "📨 Background 回傳目前歌詞資料：",
             response
         );
 
-        // ====================================
-        // 載入完整歌詞
-        // ====================================
+        console.log(
+            "📊 Background 歌詞數量：",
+            response?.lyrics?.length
+        );
+        
+        console.log(
+            "🎯 Background 目前歌詞：",
+            response?.currentLyric
+        );
+
         if (
             response &&
             response.lyrics &&
@@ -408,24 +416,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 response.lyrics.length,
                 "句"
             );
-            
-            await showLyrics(response.lyrics);
+
+
+            await showLyrics(
+                response.lyrics
+            );
         }
 
-        // ====================================
-        // 載入目前播放歌詞
-        // ====================================
 
         if (
             response &&
             response.currentLyric
         ) {
-
-            console.log(
-                "🎯 載入目前播放歌詞：",
-                response.currentLyric
-            );
-
 
             currentLyric =
                 response.currentLyric;
@@ -435,16 +437,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentLyric
             );
         }
-
-    })
-    .catch((error) => {
-
+    } catch (error) {
         console.error(
-            "❌ 要求目前歌詞資料失敗：",
+            "❌ 取得目前歌詞資料失敗：",
             error
         );
 
-    });
+    }
 });
 
 // ========================================

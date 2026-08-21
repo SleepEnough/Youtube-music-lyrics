@@ -527,7 +527,7 @@ async function findLyricsFile(fileName)
 // ========================================
 
 chrome.runtime.onMessage.addListener(
-    async (message, sender, sendResponse) => {
+    (message, sender, sendResponse) => {
 
         console.log("📨 Background 收到訊息：",message);
 
@@ -535,20 +535,15 @@ chrome.runtime.onMessage.addListener(
         // 開啟歌詞視窗
         // ========================================
 
-        if (
-            message.type ===
-            "openLyricsWindow"
-        ) {
-
+        if (message.type === "openLyricsWindow") {
+            (async () =>{
             console.log(
                 "🪟 收到開啟歌詞視窗要求"
             );
 
-
             // ====================================
             // 已經有歌詞視窗
             // ====================================
-
             if (
                 lyricsWindowId !== null
             ) {
@@ -558,11 +553,10 @@ chrome.runtime.onMessage.addListener(
 
                     console.log("♻️ 已存在歌詞視窗，沿用 ID：", lyricsWindowId);
 
-                    // ====================================
-                    // 將現有視窗帶到前面
-                    // ====================================
-                    await chrome.windows.update(lyricsWindowId, {focused: true});
-
+                    // 確保視窗沒有被最小化
+                    if (existingWindow.state === "minimized") {
+                        await chrome.windows.update(lyricsWindowId, {state: "normal"});
+                    }
                     return;
                 } catch (error) {
 
@@ -647,6 +641,7 @@ chrome.runtime.onMessage.addListener(
                     error
                 );
             }
+        })();
             return;
         }
 
@@ -719,6 +714,31 @@ chrome.runtime.onMessage.addListener(
         // 收到完整歌詞
         // ========================================
         if (message.type === "updateLyrics"){
+            console.log(
+                "📝 Background 收到歌詞，共",
+                message.lyrics.length,
+                "句"
+            );
+
+            console.log(
+                "📦 message =",
+                message
+            );
+        
+            console.log(
+                "📦 lyrics =",
+                message.lyrics
+            );
+
+            if (!Array.isArray(message.lyrics)) {
+
+                console.error(
+                    "❌ updateLyrics 收到的 lyrics 不是陣列"
+                );
+        
+                return;
+            }
+
             console.log(
                 "📝 Background 收到歌詞，共",
                 message.lyrics.length,

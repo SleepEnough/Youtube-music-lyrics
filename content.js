@@ -342,6 +342,16 @@ async function loadLyricsForSong(
                 response.text
             );
 
+        console.log(
+            "📖 LRC 原始文字長度：",
+            response.text?.length
+        );
+        
+        console.log(
+            "📖 LRC 原始內容前 200 字：",
+            response.text?.substring(0, 200)
+        );
+
 
         console.log(
             "🎵 歌詞解析完成，共",
@@ -473,6 +483,18 @@ setInterval(
 
 function sendLyricsToWindow() {
 
+    console.log(
+        "📤 準備把歌詞送給 Background，共",
+        currentLyrics.length,
+        "句"
+    );
+
+    console.log(
+        "📤 第一行歌詞：",
+        currentLyrics[0]
+    );
+
+
     chrome.runtime.sendMessage({
 
         type:
@@ -481,6 +503,17 @@ function sendLyricsToWindow() {
         lyrics:
             currentLyrics
 
+    })
+    .then(() => {
+        console.log(
+            "✅ updateLyrics 已送出"
+        );
+    })
+    .catch((error) => {
+        console.error(
+            "❌ updateLyrics 傳送失敗：",
+            error
+        );
     });
 }
 
