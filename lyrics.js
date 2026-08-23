@@ -45,7 +45,7 @@ let backgroundOpacity = 100;
 // ========================================
 // 接收 Background 傳來的訊息
 // ========================================
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener(async (message) => {
     console.log("📨 歌詞視窗收到訊息：", message.type);
     // ====================================
     // 收到整份歌詞
@@ -53,7 +53,7 @@ chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "lyricsUpdated"){
         console.log("🎵 收到歌詞，共", message.lyrics.length, "句");
         // 建立歌詞畫面
-        showLyrics(message.lyrics);
+        await showLyrics(message.lyrics);
         // -------------------------------
         // 很重要
         // -------------------------------
@@ -294,7 +294,6 @@ function highlightCurrentLyric(lyric){
 // ========================================
 // 歌詞視窗拖曳功能
 // ========================================
-
 document.addEventListener("DOMContentLoaded",async () => {
     console.log("🪟 開始初始化視窗拖曳功能");
 
@@ -378,12 +377,9 @@ document.addEventListener("DOMContentLoaded",async () => {
     // 向 Background 要目前歌詞
     // ====================================
 
-    console.log(
-        "🪟 歌詞視窗已載入，要求目前歌詞資料"
-    );
+    console.log("歌詞視窗已載入，要求目前歌詞資料");
 
     try {
-
         const response =
             await chrome.runtime.sendMessage({
                 type:
@@ -687,78 +683,4 @@ function applyBackgroundOpacity() {
     await loadLyricColor();
     await loadLyricDisplaySettings();
     applyBackgroundOpacity();
-});
-
-// ========================================
-// 歌詞視窗載入完成後
-// 要求 Background 提供目前資料
-// ========================================
-
-chrome.runtime.sendMessage({
-
-    type:
-        "requestLyrics"
-
-}).then((response) => {
-
-    console.log(
-        "📨 收到 Background 目前歌詞資料：",
-        response
-    );
-
-
-    // ====================================
-    // 有完整歌詞
-    // ====================================
-
-    if (
-        response &&
-        Array.isArray(response.lyrics) &&
-        response.lyrics.length > 0
-    ) {
-
-        console.log(
-            "🎵 載入目前歌詞，共",
-            response.lyrics.length,
-            "句"
-        );
-
-
-        showLyrics(
-            response.lyrics
-        );
-    }
-
-
-    // ====================================
-    // 有目前播放歌詞
-    // ====================================
-
-    if (
-        response &&
-        response.currentLyric
-    ) {
-
-        console.log(
-            "🎯 載入目前播放歌詞：",
-            response.currentLyric
-        );
-
-
-        currentLyric =
-            response.currentLyric;
-
-
-        highlightCurrentLyric(
-            currentLyric
-        );
-    }
-
-}).catch((error) => {
-
-    console.error(
-        "❌ 無法向 Background 要求目前歌詞：",
-        error
-    );
-
 });

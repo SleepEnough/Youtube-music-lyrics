@@ -727,7 +727,7 @@ chrome.runtime.onMessage.addListener(
                         error
                     );
                 }
-            });
+            })();
             return;
         }
 
@@ -806,30 +806,11 @@ chrome.runtime.onMessage.addListener(
                 "句"
             );
 
-            console.log(
-                "📦 message =",
-                message
-            );
-        
-            console.log(
-                "📦 lyrics =",
-                message.lyrics
-            );
-
             if (!Array.isArray(message.lyrics)) {
-
-                console.error(
-                    "❌ updateLyrics 收到的 lyrics 不是陣列"
-                );
+                console.error("❌ updateLyrics 收到的 lyrics 不是陣列");
         
                 return;
             }
-
-            console.log(
-                "📝 Background 收到歌詞，共",
-                message.lyrics.length,
-                "句"
-            );
 
             // ====================================
             // 儲存完整歌詞
