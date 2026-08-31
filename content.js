@@ -276,7 +276,7 @@ function findCurrentLyric(
 // 向 Background 取得歌詞
 // ========================================
 
-async function loadLyricsForSong(songTitle) {
+async function loadLyricsForSong(songTitle, artistName, albumName, duration) {
     const thisLoadId = ++lyricsLoadId;
     console.log(
         "🔍 正在尋找歌詞：", songTitle,
@@ -286,7 +286,11 @@ async function loadLyricsForSong(songTitle) {
         // 傳訊息給 background.js
         const response = await chrome.runtime.sendMessage({
             type:"searchLyrics",
-            songTitle: songTitle
+
+            songTitle: songTitle,
+            artistName: artistName,
+            albumName: albumName,
+            duration: duration
         });
 
         // ⭐⭐⭐ 非常重要
@@ -317,24 +321,31 @@ async function loadLyricsForSong(songTitle) {
         // ====================================
         // 找到了
         // ====================================
-        console.log("🎵 找到歌詞檔：", response.fileName);
+        console.log("🎵 找到歌詞來源：", response.source);
+        console.log("📄 歌詞檔案：", response.fileName);
 
         // ====================================
         // 解析 LRC
         // ====================================
         currentLyrics = parseLRC(response.text);
 
-        // console.log(
-        //     "📖 LRC 原始文字長度：",
-        //     response.text?.length
-        // );
-        
-        // console.log(
-        //     "📖 LRC 原始內容前 200 字：",
-        //     response.text?.substring(0, 200)
-        // );
-
         console.log("🎵 歌詞解析完成，共", currentLyrics.length, "句");
+
+        // ====================================
+        // 確認真的有同步時間
+        // ====================================
+
+        if (currentLyrics.length === 0) {
+
+            console.log(
+                "⚠️ 歌詞存在，但沒有解析出任何時間標籤"
+            );
+
+            currentLyrics = [];
+            loadedSongTitle = "";
+
+            return;
+        }
 
         // 把歌詞傳給歌詞視窗
         sendLyricsToWindow();
@@ -393,7 +404,12 @@ setInterval(async () => {
         openLyricsWindow();
 
         // 載入這首歌的 LRC
-        await loadLyricsForSong(song.title);
+        await loadLyricsForSong(
+            song.title,
+            song.artist,
+            null,
+            song.duration
+        );
     }
 
 
@@ -477,7 +493,6 @@ function sendLyricsToWindow() {
 // ========================================
 // 傳送目前播放到哪一句
 // ========================================
-
 function sendCurrentLyricToWindow(
     currentLyric
 ) {
