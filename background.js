@@ -56,64 +56,80 @@ async function getLyricsWindowTab() {
 // 安全傳送訊息給歌詞視窗
 // ========================================
 
-async function sendMessageToLyricsWindow(
-    message
-) {
-
-    const tab =
-        await getLyricsWindowTab();
-
-    if (!tab) {
-
-        console.log(
-            "⚠️ 目前沒有歌詞視窗 Tab"
-        );
-
-        return false;
-    }
-
+async function sendMessageToLyricsWindow(message) {
+    // ====================================
+    // 最多嘗試 10 次
+    // ====================================
+    const maxRetries = 10;
 
     // ====================================
-    // 確認頁面是否載入完成
+    // 每次等待 200ms
     // ====================================
+    const retryDelay = 200;
 
-    if (
-        tab.status !== "complete"
+    for (
+        let attempt = 1;
+        attempt <= maxRetries;
+        attempt++
     ) {
 
-        console.log(
-            "⏳ 歌詞視窗尚未載入完成，稍後再傳送"
-        );
+        const tab = await getLyricsWindowTab();
 
-        return false;
+        // ====================================
+        // 沒有歌詞視窗
+        // ====================================
+        if (!tab) {
+            console.log("⚠️ 目前沒有歌詞視窗 Tab");
+
+            return false;
+        }
+
+        // ====================================
+        // 歌詞視窗尚未載入
+        // ====================================
+        if (tab.status !== "complete") {
+            console.log(`⏳ 歌詞視窗尚未完成載入，第 ${attempt} 次等待`);
+
+            await new Promise(
+                resolve =>
+                    setTimeout(
+                        resolve,
+                        retryDelay
+                    )
+            );
+
+            continue;
+        }
+
+        // ====================================
+        // 嘗試傳送訊息
+        // ====================================
+        try {
+            await chrome.tabs.sendMessage(
+                tab.id,
+                message
+            );
+
+            console.log("📤 已成功傳送給歌詞視窗：", message.type);
+
+            return true;
+
+        } catch (error) {
+
+            console.log(`⚠️ 歌詞視窗尚未準備好，第 ${attempt} 次嘗試失敗：`, error.message);
+
+            await new Promise(
+                resolve =>
+                    setTimeout(
+                        resolve,
+                        retryDelay
+                    )
+            );
+        }
     }
-
-
-    try {
-
-        await chrome.tabs.sendMessage(
-            tab.id,
-            message
-        );
-
-        console.log(
-            "📤 已成功傳送給歌詞視窗：",
-            message.type
-        );
-
-        return true;
-
-    } catch (error) {
-
-        console.log(
-            "⚠️ 歌詞視窗尚未準備好：",
-            error.message
-        );
-
-        return false;
-    }
+    console.error("❌ 多次嘗試後仍無法傳送給歌詞視窗：", message.type);
+    return false;
 }
-
 // ========================================
 // 歌詞視窗位置
 // ========================================
@@ -821,7 +837,7 @@ function parseLRCLyrics(
 // 儲存並更新目前歌詞
 // ========================================
 
-function updateSavedLyrics(lyrics) {
+async function updateSavedLyrics(lyrics) {
     // ====================================
     // 確認歌詞格式
     // ====================================
@@ -849,8 +865,8 @@ function updateSavedLyrics(lyrics) {
     // ====================================
     // 通知歌詞視窗
     // ====================================
-
-    sendMessageToLyricsWindow({
+    const success =
+        await sendMessageToLyricsWindow({
 
         type:
             "lyricsUpdated",
@@ -859,8 +875,9 @@ function updateSavedLyrics(lyrics) {
             savedLyrics
 
     });
+    console.log("📤 lyricsUpdated 傳送結果：", success);
 
-    return true;
+    return success;
 }
 
 // ========================================
@@ -1049,15 +1066,31 @@ chrome.runtime.onMessage.addListener(
         // ========================================
         // 收到完整歌詞
         // ========================================
-        if (message.type === "updateLyrics"){
+        if (message.type === "updateLyrics") {
+
             console.log(
-                "📝 Background 收到歌詞，共",
+                "📝 Background 收到完整歌詞，共",
                 message.lyrics?.length,
                 "句"
             );
+            (async () => {
+                try {
+                    const success =
+                        await updateSavedLyrics(
+                            message.lyrics
+                        );
 
-            updateSavedLyrics(message.lyrics);
-
+                    console.log(
+                        "🎵 Background 歌詞更新完成：",
+                        success
+                    );
+                } catch (error) {
+                    console.error(
+                        "❌ Background 更新歌詞失敗：",
+                        error
+                    );
+                }
+            })();
             return;
         }
 
@@ -1102,8 +1135,30 @@ chrome.runtime.onMessage.addListener(
         // ========================================
         if (message.type === "songChanged") {
             console.log("🔄 偵測到換歌，清除上一首目前歌詞");
+
+            // ====================================
+            // 清除上一首完整歌詞
+            // ====================================
+            savedLyrics = [];
+
+            // ====================================
+            // 清除上一首目前歌詞
+            // ====================================
             savedCurrentLyric = null;
         
+            console.log("🧹 Background 已清除上一首歌詞");
+
+            // ====================================
+            // 通知歌詞視窗清空畫面
+            // ====================================
+
+            sendMessageToLyricsWindow({
+                type:
+                    "lyricsUpdated",
+                lyrics:
+                    []
+            });
+
             return;
         }
 
@@ -1120,46 +1175,6 @@ chrome.runtime.onMessage.addListener(
 
             return;
         }
-
-        // ========================================
-        // 設定歌詞視窗是否永遠置頂
-        // ========================================
-        // if (message.type === "setAlwaysOnTop"){
-        //     console.log("📌 設定永遠置頂：", message.value);
-
-        //     // 還沒有歌詞視窗
-        //     if (lyricsWindowId === null){
-        //         console.log("❌ 找不到歌詞視窗");
-        //         return;
-        //     }
-
-        //     // 更新視窗
-        //     chrome.windows.update(
-        //         lyricsWindowId,
-        //         {
-        //             alwaysOnTop:
-        //                 message.value
-        //         }
-
-        //     )
-        //     .then(() => {
-
-        //         console.log(
-        //             "✅ 永遠置頂設定完成"
-        //         );
-
-        //     })
-        //     .catch((error) => {
-
-        //         console.error(
-        //             "❌ 設定永遠置頂失敗：",
-        //             error
-        //         );
-
-        //     });
-
-        //     return;
-        // }
 
         // ========================================
         // 歌詞視窗要求目前資料
@@ -1266,13 +1281,41 @@ chrome.runtime.onMessage.addListener(
                     console.log(
                         "✅ LRCLIB 找到同步歌詞"
                     );
+                    
+                    console.log(
+                        "📤 準備 sendResponse 給 content.js"
+                    );
 
-                    sendResponse({
-                        success: true,
-                        source: "lrclib",
-                        fileName: null,
-                        text: lrclibResult.syncedLyrics
-                    });
+                    console.log(
+                        "📊 LRCLIB 歌詞長度：",
+                        lrclibResult.syncedLyrics?.length
+                    );
+
+                    try {
+
+                        sendResponse({
+
+                            success: true,
+
+                            source: "lrclib",
+
+                            fileName: null,
+
+                            text: lrclibResult.syncedLyrics
+
+                        });
+
+                        console.log(
+                            "✅ sendResponse 已執行"
+                        );
+
+                    } catch (error) {
+
+                        console.error(
+                            "❌ sendResponse 發生錯誤：",
+                            error
+                        );
+                    }
 
                 } catch (error) {
 
@@ -1337,60 +1380,6 @@ chrome.runtime.onMessage.addListener(
             return true;
         }
 
-        // // ==================================
-        // // 測試 LRCLIB API
-        // // ==================================
-        // if (message.type === "testLRCLIB") {
-
-        //     searchLyricsFromLRCLIB(
-
-        //         message.trackName,
-
-        //         message.artistName,
-
-        //         message.albumName,
-
-        //         message.duration
-
-        //     )
-        //     .then(
-        //         (result) => {
-
-        //             sendResponse({
-
-        //                 success:
-        //                     result !== null,
-
-        //                 result:
-        //                     result
-
-        //             });
-
-        //         }
-        //     )
-        //     .catch(
-        //         (error) => {
-
-        //             console.error(
-        //                 "❌ LRCLIB 測試失敗：",
-        //                 error
-        //             );
-
-
-        //             sendResponse({
-
-        //                 success:
-        //                     false,
-
-        //                 result:
-        //                     null
-
-        //             });
-
-        //         }
-        //     );
-        //     return true;
-        // }
 
         // ==================================
         // 測試 LRCLIB 同步歌詞解析

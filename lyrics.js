@@ -2,7 +2,7 @@
 // YTM Lyrics
 // 歌詞視窗
 // ========================================
-console.log("🪟 lyrics.js 已載入");
+console.log("lyrics.js 已載入");
 
 // ========================================
 // 記錄目前播放的歌詞
@@ -51,18 +51,39 @@ chrome.runtime.onMessage.addListener(async (message) => {
     // 收到整份歌詞
     // ====================================
     if (message.type === "lyricsUpdated"){
-        console.log("🎵 收到歌詞，共", message.lyrics.length, "句");
-        // 建立歌詞畫面
+        console.log("🎵 收到歌詞，共", message.lyrics?.length ?? 0, "句");
+
+        // ====================================
+        // 如果 Background 傳來空歌詞
+        // 表示正在換歌
+        // ====================================
+        if (!message.lyrics || message.lyrics.length === 0) {
+            console.log("🧹 收到空歌詞，清除畫面");
+
+            currentLyric = null;
+
+            const lyricsElement = document.querySelector("#lyrics");
+
+            if (lyricsElement) {
+                lyricsElement.innerHTML = "";
+            }
+
+            return;
+        }
+        // ====================================
+        // 建立新歌歌詞
+        // ====================================
+        currentLyric = null;
         await showLyrics(message.lyrics);
-        // -------------------------------
-        // 很重要
-        // -------------------------------
-        // 如果目前已經知道正在播放哪一句，
-        // 歌詞重新建立後，
-        // 立刻再套用一次高亮。
+
+        // ====================================
+        // 如果已經收到新的目前歌詞
+        // 再重新高亮
+        // ====================================
         if (currentLyric)
             highlightCurrentLyric(currentLyric);
     }
+
     // ====================================
     // 收到目前播放歌詞
     // ====================================
@@ -259,43 +280,10 @@ function highlightCurrentLyric(lyric){
 }
 
 // ========================================
-// 永遠置頂
-// ========================================
-
-// const alwaysOnTopCheckbox =
-//     document.querySelector(
-//         "#alwaysOnTop"
-//     );
-
-
-// alwaysOnTopCheckbox.addEventListener(
-//     "change",
-//     () => {
-
-//         console.log(
-//             "📌 永遠置頂：",
-//             alwaysOnTopCheckbox.checked
-//         );
-
-
-//         chrome.runtime.sendMessage({
-
-//             type:
-//                 "setAlwaysOnTop",
-
-//             value:
-//                 alwaysOnTopCheckbox.checked
-
-//         });
-
-//     }
-// );
-
-// ========================================
 // 歌詞視窗拖曳功能
 // ========================================
 document.addEventListener("DOMContentLoaded",async () => {
-    console.log("🪟 開始初始化視窗拖曳功能");
+    console.log("開始初始化視窗拖曳功能");
 
     // ====================================
     // 找到控制列
@@ -445,12 +433,10 @@ document.addEventListener("DOMContentLoaded",async () => {
 // ========================================
 // 偵測使用者手動捲動歌詞
 // ========================================
-
 const lyricsElement =
 document.querySelector(
     "#lyrics"
 );
-
 
 if (lyricsElement) {
     lyricsElement.addEventListener("scroll", () => {
@@ -477,7 +463,6 @@ if (lyricsElement) {
 // ========================================
 // 檢查是否恢復自動捲動
 // ========================================
-
 function checkAutoScrollResume() {
 
     // 沒有目前歌詞
