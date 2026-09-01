@@ -125,7 +125,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
 // ========================================
 
 async function showLyrics(lyrics){
-
     await loadLyricDisplaySettings();
 
     const lyricsElement = document.querySelector("#lyrics");
@@ -195,7 +194,6 @@ async function showLyrics(lyrics){
 // ========================================
 // 標示目前播放的歌詞
 // ========================================
-
 function highlightCurrentLyric(lyric){
     // 如果沒有目前歌詞
     if (!lyric)
@@ -364,7 +362,6 @@ document.addEventListener("DOMContentLoaded",async () => {
     // ====================================
     // 向 Background 要目前歌詞
     // ====================================
-
     console.log("歌詞視窗已載入，要求目前歌詞資料");
 
     try {
@@ -394,28 +391,20 @@ document.addEventListener("DOMContentLoaded",async () => {
             response.lyrics &&
             response.lyrics.length > 0
         ) {
-
             console.log(
                 "🎵 載入目前歌詞，共",
                 response.lyrics.length,
                 "句"
             );
 
-
             await showLyrics(
                 response.lyrics
             );
         }
 
-
-        if (
-            response &&
-            response.currentLyric
-        ) {
-
+        if (response && response.currentLyric) {
             currentLyric =
                 response.currentLyric;
-
 
             highlightCurrentLyric(
                 currentLyric
@@ -426,7 +415,6 @@ document.addEventListener("DOMContentLoaded",async () => {
             "❌ 取得目前歌詞資料失敗：",
             error
         );
-
     }
 });
 
@@ -668,4 +656,4 @@ function applyBackgroundOpacity() {
     await loadLyricColor();
     await loadLyricDisplaySettings();
     applyBackgroundOpacity();
-});
+})();
