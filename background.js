@@ -673,7 +673,7 @@ async function searchLyricsFromLRCLIB(
         // ====================================
         // 歌曲長度
         // ====================================
-        if (duration) {
+        if (Number.isFinite(duration)) {
             url.searchParams.set("duration", Math.round(duration));
         }
 
@@ -1211,40 +1211,29 @@ chrome.runtime.onMessage.addListener(
         // ② 找不到時自動搜尋 LRCLIB
         // ==================================
         if (message.type === "searchLyrics") {
-            (async () => {
+            console.log("🔍 Background 開始搜尋歌詞：", message.songTitle);
+
+            return (async () => {
                 try {
-                    // ====================================
-                    // ① 先搜尋本機 LRC
-                    // ====================================
-                    const localResult =
-                        await searchLyricsFile(
-                            message.songTitle
-                        );
+                    console.log("📁 先搜尋本機 LRC：", message.songTitle);
+
+                    const localResult = await searchLyricsFile(message.songTitle);
 
                     if (localResult) {
-
-                        console.log(
-                            "💾 使用本機 LRC：",
-                            localResult.fileName
-                        );
-
-                        sendResponse({
+                        const result = {
                             success: true,
                             source: "local",
                             fileName: localResult.fileName,
-                            text: localResult.text
-                        });
+                            text: localResult.text,
+                            loadId: message.loadId
+                        };
 
-                        return;
+                        console.log("📤 Background 回傳本機 LRC：", result);
+
+                        return result;
                     }
 
-                    // ====================================
-                    // ② 本機找不到 → 搜尋 LRCLIB
-                    // ====================================
-
-                    console.log(
-                        "🌐 本機沒有找到 LRC，改搜尋 LRCLIB"
-                    );
+                    console.log("🌐 本機沒有找到 LRC，改搜尋 LRCLIB");
 
                     const lrclibResult =
                         await searchLyricsFromLRCLIB(
@@ -1254,87 +1243,54 @@ chrome.runtime.onMessage.addListener(
                             message.duration
                         );
 
-                    // ====================================
-                    // ③ LRCLIB 也找不到
-                    // ====================================
-
                     if (!lrclibResult) {
-
                         console.log(
                             "❌ 本機 LRC 與 LRCLIB 都找不到同步歌詞"
                         );
 
-                        sendResponse({
+                        return {
                             success: false,
                             source: null,
                             fileName: null,
-                            text: null
-                        });
-
-                        return;
+                            text: null,
+                            loadId: message.loadId
+                        };
                     }
 
-                    // ====================================
-                    // ④ 找到 LRCLIB 同步歌詞
-                    // ====================================
-
-                    console.log(
-                        "✅ LRCLIB 找到同步歌詞"
-                    );
-                    
-                    console.log(
-                        "📤 準備 sendResponse 給 content.js"
-                    );
+                    console.log("✅ LRCLIB 找到同步歌詞");
 
                     console.log(
                         "📊 LRCLIB 歌詞長度：",
                         lrclibResult.syncedLyrics?.length
                     );
 
-                    try {
+                    const result = {
+                        success: true,
+                        source: "lrclib",
+                        fileName: null,
+                        text: lrclibResult.syncedLyrics,
+                        loadId: message.loadId
+                    };
 
-                        sendResponse({
-
-                            success: true,
-
-                            source: "lrclib",
-
-                            fileName: null,
-
-                            text: lrclibResult.syncedLyrics
-
-                        });
-
-                        console.log(
-                            "✅ sendResponse 已執行"
-                        );
-
-                    } catch (error) {
-
-                        console.error(
-                            "❌ sendResponse 發生錯誤：",
-                            error
-                        );
-                    }
-
-                } catch (error) {
-
-                    console.error(
-                        "❌ 搜尋歌詞失敗：",
-                        error
+                    console.log(
+                        "📤 Background 回傳 LRCLIB 結果：",
+                        result
                     );
 
-                    sendResponse({
+                    return result;
+
+                } catch (error) {
+                    console.error("❌ 搜尋歌詞失敗：", error);
+
+                    return {
                         success: false,
                         source: null,
                         fileName: null,
-                        text: null
-                    });
+                        text: null,
+                        loadId: message.loadId
+                    };
                 }
-
             })();
-
-            return true;
         }
 
         // ==================================
