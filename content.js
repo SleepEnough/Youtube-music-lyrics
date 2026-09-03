@@ -294,34 +294,41 @@ async function loadLyricsForSong(
             }
         );
 
-        let response;
+        response = await new Promise((resolve) => {
 
-        try {
-            response = await chrome.runtime.sendMessage({
-                type: "searchLyrics",
-                songTitle: songTitle,
-                artistName: artistName,
-                albumName: albumName,
-                duration: duration,
-                loadId: thisLoadId
-            });
-
-            console.log(
-                "📥 content.js 收到 searchLyrics 回應：",
-                response,
-                "Load ID：",
-                thisLoadId,
-                "目前 Load ID：",
-                lyricsLoadId
+            chrome.runtime.sendMessage(
+                {
+                    type: "searchLyrics",
+                    songTitle,
+                    artistName,
+                    albumName,
+                    duration,
+                    loadId: thisLoadId
+                },
+                (result) => {
+        
+                    const error = chrome.runtime.lastError;
+        
+                    if (error) {
+                        console.error(
+                            "❌ chrome.runtime.sendMessage 發生錯誤：",
+                            error.message
+                        );
+        
+                        resolve(null);
+                        return;
+                    }
+        
+                    console.log(
+                        "📥 callback 收到 Background 回應：",
+                        result
+                    );
+        
+                    resolve(result);
+                }
             );
-        } catch (error) {
-            console.error(
-                "❌ content.js sendMessage 發生錯誤：",
-                error
-            );
-            return;
-        }
-
+        
+        });
         // ====================================
         // ★ 最重要
         //
@@ -644,7 +651,7 @@ async function checkSongAndLyric() {
         await loadLyricsForSong(
             song.title,
             song.artist,
-            null,
+            song.albumName,
             song.duration
         );
     }

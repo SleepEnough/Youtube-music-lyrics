@@ -45,13 +45,14 @@ let backgroundOpacity = 100;
 // ========================================
 // 接收 Background 傳來的訊息
 // ========================================
-chrome.runtime.onMessage.addListener(async (message) => {
+chrome.runtime.onMessage.addListener((message) => {
     console.log("📨 歌詞視窗收到訊息：", message.type);
     // ====================================
     // 收到整份歌詞
     // ====================================
     if (message.type === "lyricsUpdated"){
-        console.log("🎵 收到歌詞，共", message.lyrics?.length ?? 0, "句");
+        (async () => {
+            console.log("🎵 收到歌詞，共", message.lyrics?.length ?? 0, "句");
 
         // ====================================
         // 如果 Background 傳來空歌詞
@@ -82,6 +83,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
         // ====================================
         if (currentLyric)
             highlightCurrentLyric(currentLyric);
+        })();
     }
 
     // ====================================

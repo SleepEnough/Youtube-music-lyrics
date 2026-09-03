@@ -1211,7 +1211,12 @@ chrome.runtime.onMessage.addListener(
         // ② 找不到時自動搜尋 LRCLIB
         // ==================================
         if (message.type === "searchLyrics") {
-            console.log("🔍 Background 開始搜尋歌詞：", message.songTitle);
+            console.log("🔍 Background 開始搜尋歌詞：", message.songTitle, "Load ID：", message.loadId);
+
+            console.log(
+                "🆔 Background 收到的訊息物件：",
+                message
+            );
 
             return (async () => {
                 try {
