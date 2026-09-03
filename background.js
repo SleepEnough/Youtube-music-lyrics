@@ -720,17 +720,26 @@ async function searchLyricsFromLRCLIB(
         // ====================================
         if (!data.syncedLyrics) {
             console.log("⚠️ LRCLIB 有歌曲，但沒有同步歌詞");
-            return null;
+            if (data.plainLyrics) {
+                console.log("📝 LRCLIB 有一般歌詞，改使用 plainLyrics");
+
+                return {
+                    type: "plain",
+                    syncedLyrics: null,
+                    plainLyrics: data.plainLyrics
+                };
+            }
+
+        console.log("❌ LRCLIB 連一般歌詞也沒有");
+        return null;
         }
 
         console.log("✅ LRCLIB 找到同步歌詞");
 
         return {
-            trackName: data.trackName,
-            artistName: data.artistName,
-            albumName: data.albumName,
-            duration: data.duration,
-            syncedLyrics: data.syncedLyrics
+            type: "synced",
+            syncedLyrics: data.syncedLyrics,
+            plainLyrics: data.plainLyrics || null
         };
     } catch (error) {
         console.error("❌ LRCLIB 搜尋失敗：", error);
@@ -1261,27 +1270,42 @@ chrome.runtime.onMessage.addListener(
                             loadId: message.loadId
                         };
                     }
+                    if (lrclibResult.type === "plain") {
+                        console.log("📝 使用 LRCLIB 一般歌詞");
+                        console.log(
+                            "📊 LRCLIB 一般歌詞長度：",
+                            lrclibResult.plainLyrics?.length
+                        );
+
+                        const result = {
+                            success: true,
+                            source: "lrclib",
+                            lyricType: "plain",
+                            fileName: null,
+                            text: lrclibResult.plainLyrics,
+                            loadId: message.loadId
+                        };
+
+                        console.log("📤 Background 回傳 LRCLIB 一般歌詞結果：", result);
+                        return result;
+                    }
 
                     console.log("✅ LRCLIB 找到同步歌詞");
-
                     console.log(
-                        "📊 LRCLIB 歌詞長度：",
+                        "📊 LRCLIB 同步歌詞長度：",
                         lrclibResult.syncedLyrics?.length
                     );
 
                     const result = {
                         success: true,
                         source: "lrclib",
+                        lyricType: "synced",
                         fileName: null,
                         text: lrclibResult.syncedLyrics,
                         loadId: message.loadId
                     };
 
-                    console.log(
-                        "📤 Background 回傳 LRCLIB 結果：",
-                        result
-                    );
-
+                    console.log("📤 Background 回傳 LRCLIB 同步歌詞結果：", result);
                     return result;
 
                 } catch (error) {

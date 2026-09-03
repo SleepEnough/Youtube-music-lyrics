@@ -419,64 +419,67 @@ async function loadLyricsForSong(
         // ====================================
         // 解析 LRC
         // ====================================
+        let parsedLyrics = [];
 
-        console.log(
-            "🧪 content.js 開始解析新歌 LRC"
-        );
+        // ========================================
+        // 判斷歌詞類型
+        // ========================================
+        if (response.lyricType === "plain") {
 
-        const parsedLyrics =
-            parseLRC(
-                response.text
-            );
+            console.log("📝 content.js 收到一般歌詞，不解析時間標籤");
 
-        // ====================================
-        // 再確認一次
-        //
-        // 因為 parseLRC 期間也可能換歌
-        // ====================================
+            const lines = response.text
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(line => line !== "");
 
-        if (
-            thisLoadId !== lyricsLoadId
-        ) {
+            parsedLyrics = lines.map((text) => ({
+                time: null,
+                text: text
+            }));
 
             console.log(
-                "⚠️ 解析完成時歌曲已經改變，忽略舊結果：",
-                songTitle,
-                "Load ID：",
-                thisLoadId
+                "📝 一般歌詞解析完成，共",
+                parsedLyrics.length,
+                "句"
             );
 
+        } else {
+
+            console.log("🧪 content.js 開始解析新歌 LRC");
+
+            parsedLyrics = parseLRC(response.text);
+
+            console.log(
+                "🎵 新歌歌詞解析完成，共",
+                parsedLyrics.length,
+                "句"
+            );
+        }
+
+        // ========================================
+        // 確認是否真的有歌詞
+        // ========================================
+
+        if (parsedLyrics.length === 0) {
+            console.log(
+                "⚠️ 歌詞存在，但沒有解析出任何內容：",
+                songTitle
+            );
             return;
         }
 
-        currentLyrics =
-            parsedLyrics;
+        // ========================================
+        // 更新目前正在使用的歌詞
+        // ========================================
+
+        currentLyrics = parsedLyrics;
 
         console.log(
-            "🎵 新歌歌詞解析完成，共",
+            "💾 currentLyrics 已更新，共",
             currentLyrics.length,
             "句"
         );
-
-        // ====================================
-        // 確認真的有同步時間
-        // ====================================
-
-        if (
-            currentLyrics.length === 0
-        ) {
-
-            console.log(
-                "⚠️ 歌詞存在，但沒有解析出任何時間標籤：",
-                songTitle
-            );
-
-            currentLyrics = [];
-
-            loadedSongTitle = "";
-
-            return;
-        }
 
         // ====================================
         // 傳送歌詞給 Background
