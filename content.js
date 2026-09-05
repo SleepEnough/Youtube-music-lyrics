@@ -573,69 +573,45 @@ async function checkSongAndLyric() {
     // ====================================
     // 取得歌曲
     // ====================================
-
-    const song =
-        getSongInfo();
+    const song = getSongInfo();
 
     // ====================================
     // 歌曲資料還沒準備好
     // ====================================
-
     if (!song) {
-
-        console.log(
-            "歌曲資料還沒準備好"
-        );
-
-        setTimeout(
-            checkSongAndLyric,
-            100
-        );
-
+        console.log("歌曲資料還沒準備好");
+        setTimeout(checkSongAndLyric, 100);
         return;
     }
+
+    let songChanged = false;
 
     // ====================================
     // 偵測換歌
     // ====================================
-
-    if (
-        song.title !== lastSongTitle
-    ) {
-
+    if (song.title !== lastSongTitle) {
         // ====================================
         // 記錄新歌曲
         // ====================================
-
-        lastSongTitle =
-            song.title;
+        lastSongTitle = song.title;
+        songChanged = true;
 
         // ====================================
         // ★ 立刻讓舊的歌詞搜尋失效
         // ====================================
-        console.log(
-            "🔄 歌曲改變，舊歌詞搜尋全部失效"
-        );
-
-        console.log(
-            "🎵 找到新歌曲：",
-            song.title
-        );
+        console.log("🔄 歌曲改變，舊歌詞搜尋全部失效");
+        console.log("🎵 找到新歌曲：", song.title);
 
         // ====================================
         // 清除上一首歌曲
         // ====================================
-
         currentLyrics = [];
-
         lastLyric = null;
-
         loadedSongTitle = "";
 
         // ====================================
         // 通知 Background
         // ====================================
-
         chrome.runtime.sendMessage({
             type:
                 "songChanged"
@@ -644,13 +620,11 @@ async function checkSongAndLyric() {
         // ====================================
         // 開啟歌詞視窗
         // ====================================
-
         openLyricsWindow();
 
         // ====================================
         // 載入新歌歌詞
         // ====================================
-
         await loadLyricsForSong(
             song.title,
             song.artist,
@@ -659,54 +633,31 @@ async function checkSongAndLyric() {
         );
     }
 
-    // ====================================
-    // 找目前歌詞
-    // ====================================
+    if(!songChanged){
+        // ====================================
+        // 找目前歌詞
+        // ====================================
+        const currentLyric = findCurrentLyric(song.currentTime, currentLyrics);
 
-    const currentLyric =
-        findCurrentLyric(
-            song.currentTime,
-            currentLyrics
-        );
-
-    // ====================================
-    // 如果找到歌詞
-    // ====================================
-
-    if (currentLyric) {
-
-        // ==================================
-        // 跟上一句不同
-        // ==================================
-
-        if (
-            !lastLyric ||
-            currentLyric.time !==
-            lastLyric.time
-        ) {
-
-            lastLyric =
-                currentLyric;
-
-            console.log(
-                "🎵 目前歌詞：",
-                currentLyric.text
-            );
-
-            sendCurrentLyricToWindow(
-                currentLyric
-            );
+        // ====================================
+        // 如果找到歌詞
+        // ====================================
+        if (currentLyric) {
+            // ==================================
+            // 跟上一句不同
+            // ==================================
+            if (!lastLyric || currentLyric.time !== lastLyric.time) {
+                lastLyric = currentLyric;
+                console.log("🎵 目前歌詞：", currentLyric.text);
+                sendCurrentLyricToWindow(currentLyric);
+            }
         }
     }
 
     // ====================================
     // 100ms 後再檢查
     // ====================================
-
-    setTimeout(
-        checkSongAndLyric,
-        100
-    );
+    setTimeout(checkSongAndLyric, 100);
 }
 
 // ========================================
