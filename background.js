@@ -705,91 +705,76 @@ const LRCLIB_API_URL = "https://lrclib.net/api/get";
 // ========================================
 // 從 LRCLIB 搜尋歌詞
 // ========================================
-
-async function searchLyricsFromLRCLIB(
-    trackName,
-    artistName,
-    albumName = null,
-    duration = null
-) {
+async function searchLyricsFromLRCLIB(trackName, artistName, albumName = null, duration = null) {
     console.log("🌐 開始搜尋 LRCLIB：");
-
     console.log("🎵 歌曲：", trackName);
-
     console.log("🎤 歌手：", artistName);
+    console.log("💿 專輯：", albumName);
+    console.log("⏱️ 時長：", duration);
+
+    const buildUrl = (includeDuration) => {
+        const params = new URLSearchParams();
+
+        params.set("track_name", trackName);
+        params.set("artist_name", artistName);
+
+        if (albumName) {
+            params.set("album_name", albumName);
+        }
+
+        if (includeDuration && Number.isFinite(duration)) {
+            params.set("duration", Math.round(duration));
+        }
+
+        return `${LRCLIB_API_URL}?${params.toString()}`;
+    };
+
+    // 第一次：如果有 duration，優先帶 duration 搜尋
+    let url = buildUrl(true);
+
+    console.log("🌐 LRCLIB URL：", url);
 
     try {
-        // ====================================
-        // 建立 URL
-        // ====================================
-        const url = new URL(LRCLIB_API_URL);
+        let response = await fetch(url, {
+            headers: {
+                "Lrclib-Client": "YTM-Lyrics/1.0"
+            }
+        });
 
-        // ====================================
-        // 必填參數
-        // ====================================
-        url.searchParams.set("track_name", trackName);
+        // 帶 duration 找不到
+        if (response.status === 404 && Number.isFinite(duration)) {
+            console.log("⚠️ LRCLIB 帶 duration 找不到，改用不帶 duration 再搜尋");
 
-        url.searchParams.set("artist_name", artistName);
+            // 第二次：完全不帶 duration
+            url = buildUrl(false);
 
-        // ====================================
-        // 專輯名稱
-        // ====================================
-        if (albumName) {
-            url.searchParams.set("album_name", albumName);
-        }
+            console.log("🌐 LRCLIB fallback URL：", url);
 
-        // ====================================
-        // 歌曲長度
-        // ====================================
-        if (Number.isFinite(duration)) {
-            url.searchParams.set("duration", Math.round(duration));
-        }
-
-        console.log("🌐 LRCLIB URL：", url.toString());
-
-        // ====================================
-        // 呼叫 API
-        // ====================================
-        const response =
-            await fetch(
-                url,
-                {
-                    headers: {"Lrclib-Client": "YTM-Lyrics/1.0"}
+            response = await fetch(url, {
+                headers: {
+                    "Lrclib-Client": "YTM-Lyrics/1.0"
                 }
-            );
+            });
+        }
 
-        // ====================================
-        // 找不到
-        // ====================================
-        if (
-            response.status === 404
-        ) {
+        if (response.status === 404) {
             console.log("❌ LRCLIB 找不到歌詞");
             return null;
         }
 
-        // ====================================
-        // API 錯誤
-        // ====================================
         if (!response.ok) {
-            console.error("❌ LRCLIB API 錯誤：", response.status);
+            console.log("❌ LRCLIB API 錯誤：", response.status);
             return null;
         }
 
-        // ====================================
-        // 解析 JSON
-        // ====================================
         const data = await response.json();
 
         console.log("📦 LRCLIB 回傳資料：", data);
 
-        // ====================================
-        // 沒有同步歌詞
-        // ====================================
+        // 沒有同步歌詞，但有純文字歌詞
         if (!data.syncedLyrics) {
-            console.log("⚠️ LRCLIB 有歌曲，但沒有同步歌詞");
             if (data.plainLyrics) {
-                console.log("📝 LRCLIB 有一般歌詞，改使用 plainLyrics");
+                console.log("✅ LRCLIB 找到純文字歌詞");
 
                 return {
                     type: "plain",
@@ -798,8 +783,8 @@ async function searchLyricsFromLRCLIB(
                 };
             }
 
-        console.log("❌ LRCLIB 連一般歌詞也沒有");
-        return null;
+            console.log("❌ LRCLIB 沒有歌詞");
+            return null;
         }
 
         console.log("✅ LRCLIB 找到同步歌詞");
@@ -809,6 +794,7 @@ async function searchLyricsFromLRCLIB(
             syncedLyrics: data.syncedLyrics,
             plainLyrics: data.plainLyrics || null
         };
+
     } catch (error) {
         console.error("❌ LRCLIB 搜尋失敗：", error);
         return null;

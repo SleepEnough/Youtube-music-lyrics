@@ -110,14 +110,15 @@ function getSongInfo()
 
     // 回傳歌曲資料
     return {
-
         title: title,
-
         artist: artist,
-
         currentTime: video.currentTime,
-            
-        duration: Number.isFinite(video.duration) ? video.duration : null
+        duration: Number.isFinite(video.duration) ? video.duration : null,
+        // 🧪 Debug：觀察 YouTube Music 播放器狀態
+        paused: video.paused,
+        readyState: video.readyState,
+        seeking: video.seeking,
+        ended: video.ended
     };
 }
 
@@ -125,7 +126,6 @@ function getSongInfo()
 // ========================================
 // 解析 LRC 歌詞
 // ========================================
-
 function parseLRC(lrcText) 
 {
     console.log("🧪 parseLRC() 開始解析");
@@ -213,7 +213,6 @@ function parseLRC(lrcText)
 // ========================================
 // 找出目前應該播放哪一句歌詞
 // ========================================
-
 function findCurrentLyric(
     currentTime,
     lyrics
@@ -575,6 +574,19 @@ async function checkSongAndLyric() {
     // ====================================
     const song = getSongInfo();
 
+    // 🧪 Debug：觀察歌曲資訊與 video 狀態是否同步
+    if (song) {
+        console.log("🧪 播放器狀態：", {
+            title: song.title,
+            currentTime: song.currentTime,
+            duration: song.duration,
+            paused: song.paused,
+            readyState: song.readyState,
+            seeking: song.seeking,
+            ended: song.ended
+        });
+    }
+
     // ====================================
     // 歌曲資料還沒準備好
     // ====================================
@@ -583,7 +595,6 @@ async function checkSongAndLyric() {
         setTimeout(checkSongAndLyric, 100);
         return;
     }
-
     let songChanged = false;
 
     // ====================================
@@ -595,7 +606,7 @@ async function checkSongAndLyric() {
         // ====================================
         lastSongTitle = song.title;
         songChanged = true;
-
+        
         // ====================================
         // ★ 立刻讓舊的歌詞搜尋失效
         // ====================================
@@ -653,7 +664,6 @@ async function checkSongAndLyric() {
             }
         }
     }
-
     // ====================================
     // 100ms 後再檢查
     // ====================================
@@ -670,7 +680,6 @@ checkSongAndLyric();
 // ========================================
 // 傳送歌詞給歌詞視窗
 // ========================================
-
 async function sendLyricsToWindow() {
 
     console.log(
@@ -723,6 +732,4 @@ function sendCurrentLyricToWindow(
     });
 }
 
-console.log(
-    "🚀 YTM Lyrics content.js 已載入"
-);
+console.log("🚀 YTM Lyrics content.js 已載入");
