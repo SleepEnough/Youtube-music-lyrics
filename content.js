@@ -68,11 +68,6 @@ window.addEventListener("message", (event) => {
         typeof event.data.playerState === "number"
             ? event.data.playerState
             : null;
-
-    // console.log(
-    //     "🌉 Bridge 收到時間：",
-    //     pagePlayerCurrentTime
-    // );
 });
 
 // ========================================
@@ -165,10 +160,6 @@ function getSongInfo()
     let playerCurrentTime =
         pagePlayerCurrentTime;
 
-    console.log(
-        "🎯 getSongInfo playerCurrentTime：",
-        playerCurrentTime
-    );
     // ========================================
     // 🎯 currentTime fallback
     //
