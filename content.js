@@ -46,6 +46,35 @@ let loadedSongTitle = "";
 // ========================================
 let lyricsLoadId = 0;
 
+let pagePlayerCurrentTime = null;
+let pagePlayerState = null;
+
+window.addEventListener("message", (event) => {
+    if (event.source !== window) return;
+
+    if (
+        !event.data ||
+        event.data.type !== "YTM_LYRICS_PLAYER_TIME"
+    ) {
+        return;
+    }
+
+    pagePlayerCurrentTime =
+        typeof event.data.currentTime === "number"
+            ? event.data.currentTime
+            : null;
+
+    pagePlayerState =
+        typeof event.data.playerState === "number"
+            ? event.data.playerState
+            : null;
+
+    // console.log(
+    //     "🌉 Bridge 收到時間：",
+    //     pagePlayerCurrentTime
+    // );
+});
+
 // ========================================
 // 取得目前歌曲資訊
 // ========================================
@@ -103,25 +132,100 @@ function getSongInfo()
             "video"
         );
 
+    const moviePlayer =
+        document.getElementById(
+            "movie_player"
+        );
+
     // 如果播放器還沒出現
-    if (!video) {
+    if (!video && !moviePlayer) {
         return null;
+    }
+
+    const progressBar = document.querySelector(
+        "tp-yt-paper-slider#progress-bar"
+    );
+
+    const progressCurrentTime = progressBar
+        ? Number(
+            progressBar.getAttribute(
+                "aria-valuenow"
+            )
+        )
+        : null;
+
+    const progressDuration = progressBar
+        ? Number(
+            progressBar.getAttribute(
+                "aria-valuemax"
+            )
+        )
+        : null;
+
+    let playerCurrentTime =
+        pagePlayerCurrentTime;
+
+    console.log(
+        "🎯 getSongInfo playerCurrentTime：",
+        playerCurrentTime
+    );
+    // ========================================
+    // 🎯 currentTime fallback
+    //
+    // ① movie_player.getCurrentTime()
+    // ② progressBar aria-valuenow
+    // ③ video.currentTime
+    // ========================================
+
+    let currentTime = null;
+
+    if (Number.isFinite(playerCurrentTime)) {
+
+        currentTime = playerCurrentTime;
+
+    } else if (
+        Number.isFinite(progressCurrentTime)
+    ) {
+
+        currentTime = progressCurrentTime;
+
+    } else if (
+        video &&
+        Number.isFinite(video.currentTime)
+    ) {
+
+        currentTime = video.currentTime;
+    }
+
+    // ========================================
+    // 🎯 duration fallback
+    //
+    // 優先使用 progressBar 的 duration，
+    // 因為自然換歌時 video.duration 可能仍是舊歌曲。
+    // ========================================
+
+    let duration = null;
+
+    if (Number.isFinite(progressDuration)) {
+        duration = progressDuration;
+    } else if (
+        video &&
+        Number.isFinite(video.duration)
+    ) {
+        duration = video.duration;
     }
 
     // 回傳歌曲資料
     return {
         title: title,
         artist: artist,
-        currentTime: video.currentTime,
-        duration: Number.isFinite(video.duration) ? video.duration : null,
-        // 🧪 Debug：觀察 YouTube Music 播放器狀態
-        paused: video.paused,
-        readyState: video.readyState,
-        seeking: video.seeking,
-        ended: video.ended
+
+        // 🎯 使用 YouTube Music Player API 的精確時間
+        currentTime: currentTime,
+        duration: duration,
+
     };
 }
-
 
 // ========================================
 // 解析 LRC 歌詞
@@ -174,6 +278,10 @@ function parseLRC(lrcText)
         const text =
             match[3].trim();
 
+        if(!text){
+            continue;
+        }
+
 
         // 分鐘 + 秒
         // 統一轉換成秒數
@@ -208,7 +316,6 @@ function parseLRC(lrcText)
 
     return lyrics;
 }
-
 
 // ========================================
 // 找出目前應該播放哪一句歌詞
@@ -574,19 +681,6 @@ async function checkSongAndLyric() {
     // ====================================
     const song = getSongInfo();
 
-    // 🧪 Debug：觀察歌曲資訊與 video 狀態是否同步
-    if (song) {
-        console.log("🧪 播放器狀態：", {
-            title: song.title,
-            currentTime: song.currentTime,
-            duration: song.duration,
-            paused: song.paused,
-            readyState: song.readyState,
-            seeking: song.seeking,
-            ended: song.ended
-        });
-    }
-
     // ====================================
     // 歌曲資料還沒準備好
     // ====================================
@@ -659,7 +753,7 @@ async function checkSongAndLyric() {
             // ==================================
             if (!lastLyric || currentLyric.time !== lastLyric.time) {
                 lastLyric = currentLyric;
-                console.log("🎵 目前歌詞：", currentLyric.text);
+                // console.log("🎵 目前歌詞：", currentLyric.text);
                 sendCurrentLyricToWindow(currentLyric);
             }
         }
@@ -675,7 +769,6 @@ async function checkSongAndLyric() {
 // ========================================
 
 checkSongAndLyric();
-
 
 // ========================================
 // 傳送歌詞給歌詞視窗
