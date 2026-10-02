@@ -50,17 +50,8 @@
     }
 
     /* ========================================
-    目前播放的歌詞
-    ======================================== */
-
-    #lyrics .current {
-        /* 目前歌詞的外觀由 lyrics.js 控制 */
-    }
-
-    /* ========================================
     浮動視窗控制列
     ======================================== */
-
     #titleBar {
 
         padding: 10px;
@@ -75,6 +66,53 @@
 
         font-weight: bold;
     }
+
+    /* ========================================
+   LRCLIB 候選歌詞選單
+   ======================================== */
+    #lyricCandidateSelect {
+
+        display: none;
+
+        margin-left: 10px;
+
+        max-width: 260px;
+
+        padding: 3px 6px;
+
+        border-radius: 4px;
+
+        border: 1px solid rgba(
+            255,
+            255,
+            255,
+            0.25
+        );
+
+        background: rgba(
+            0,
+            0,
+            0,
+            0.45
+        );
+
+        color: white;
+
+        font-size: 12px;
+
+        cursor: pointer;
+    }
+
+    /* ========================================
+    下拉選單中的選項
+    ======================================== */
+
+    #lyricCandidateSelect option {
+
+        background: #222;
+
+        color: white;
+    }
     </style>
 </head>
 
@@ -83,13 +121,27 @@
 <!-- ========================================
 浮動視窗控制列
 ======================================== -->
-
 <div id="titleBar">
 
     <span id="windowTitle">
-        🎵 YTM Lyrics
+        YTM Lyrics
     </span>
-    
+
+    <!-- ========================================
+         LRCLIB 候選歌詞選單
+         ========================================
+
+         預設隱藏。
+
+         只有目前歌曲存在多個 LRCLIB 候選時，
+         lyrics.js 才會顯示這個選單。
+    -->
+    <select
+        id="lyricCandidateSelect"
+        title="選擇其他 LRCLIB 歌詞"
+    >
+    </select>
+
 </div>
     
     

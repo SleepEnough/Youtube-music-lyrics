@@ -29,6 +29,17 @@ let autoScrolling = false;
 let autoScrollTimer = null;
 
 // ========================================
+// LRCLIB 候選歌詞
+// ========================================
+//
+// candidates：目前歌曲的所有 LRCLIB 候選
+//
+// selectedCandidate：目前正在使用的候選
+// ========================================
+let lyricCandidates = [];
+let selectedLyricCandidate = null;
+
+// ========================================
 // 目前歌詞顏色
 // ========================================
 let lyricColor = "#ff0000";
@@ -46,7 +57,7 @@ let backgroundOpacity = 100;
 // 接收 Background 傳來的訊息
 // ========================================
 chrome.runtime.onMessage.addListener((message) => {
-    console.log("📨 歌詞視窗收到訊息：", message.type);
+    // console.log("📨 歌詞視窗收到訊息：", message.type);
     // ====================================
     // 收到整份歌詞
     // ====================================
@@ -90,7 +101,7 @@ chrome.runtime.onMessage.addListener((message) => {
     // 收到目前播放歌詞
     // ====================================
     if (message.type === "currentLyricUpdated"){
-        console.log("🎯 收到目前播放歌詞：", message.lyric);
+        // console.log("🎯 收到目前播放歌詞：", message.lyric);
         // 記住目前歌詞
         currentLyric = message.lyric;
         // 標示目前歌詞
@@ -120,12 +131,26 @@ chrome.runtime.onMessage.addListener((message) => {
         applyLyricDisplaySettings();
         applyBackgroundOpacity();
     }
+
+    // ====================================
+    // LRCLIB 候選更新
+    // ====================================
+    if (message.type === "lyricCandidatesUpdated") {
+        console.log(
+            "📨 lyrics.js 收到訊息：",
+            message
+        );
+        
+        updateLyricCandidateSelect(
+            message.candidates,
+            message.selectedCandidate
+        );
+    }
 });
 
 // ========================================
 // 顯示整份歌詞
 // ========================================
-
 async function showLyrics(lyrics){
     await loadLyricDisplaySettings();
 
@@ -201,12 +226,12 @@ function highlightCurrentLyric(lyric){
     if (!lyric)
         return;
 
-    console.log("🎯 開始標示目前歌詞：", lyric);
+    // console.log("🎯 開始標示目前歌詞：", lyric);
 
     // 找到所有歌詞
     const lines = document.querySelectorAll("#lyrics div");
 
-    console.log("🔎 找到歌詞元素：", lines.length);
+    // console.log("🔎 找到歌詞元素：", lines.length);
 
     // 如果歌詞還沒建立
     if (lines.length === 0) {
@@ -404,6 +429,28 @@ document.addEventListener("DOMContentLoaded",async () => {
             );
         }
 
+        // ========================================
+        // 載入目前歌曲的 LRCLIB 候選
+        // ========================================
+        if (
+            response &&
+            Array.isArray(
+                response.candidates
+            )
+        ) {
+
+            console.log(
+                "📚 載入目前 LRCLIB 候選：",
+                response.candidates.length,
+                "筆"
+            );
+
+            updateLyricCandidateSelect(
+                response.candidates,
+                response.selectedCandidate
+            );
+        }
+
         if (response && response.currentLyric) {
             currentLyric =
                 response.currentLyric;
@@ -423,10 +470,7 @@ document.addEventListener("DOMContentLoaded",async () => {
 // ========================================
 // 偵測使用者手動捲動歌詞
 // ========================================
-const lyricsElement =
-document.querySelector(
-    "#lyrics"
-);
+const lyricsElement = document.querySelector("#lyrics");
 
 if (lyricsElement) {
     lyricsElement.addEventListener("scroll", () => {
@@ -536,13 +580,7 @@ function checkAutoScrollResume() {
                 containerCenter
             );
 
-
-        console.log(
-            "📏 目前歌詞距離中央：",
-            Math.round(distance),
-            "px"
-        );
-
+        // console.log("📏 目前歌詞距離中央：", Math.round(distance), "px");
 
         // ====================================
         // 如果目前歌詞已經接近中央
@@ -567,7 +605,6 @@ function checkAutoScrollResume() {
 // ========================================
 // 讀取歌詞顏色
 // ========================================
-
 async function loadLyricColor() {
 
     try {
@@ -585,7 +622,6 @@ async function loadLyricColor() {
 // ========================================
 // 讀取歌詞顯示設定
 // ========================================
-
 async function loadLyricDisplaySettings() {
     try {
         const result =
@@ -652,6 +688,231 @@ function applyBackgroundOpacity() {
     document.body.style.setProperty("--background-opacity", opacity);
 
     console.log("🌫️ 背景透明度：", backgroundOpacity + "%");
+}
+
+// ========================================
+// LRCLIB 候選歌詞下拉選單
+// ========================================
+const lyricCandidateSelect = document.getElementById("lyricCandidateSelect");
+
+// ========================================
+// 建立 LRCLIB 候選歌詞下拉選單
+// ========================================
+//
+// 功能：
+// 將 Background / content.js 傳來的
+// LRCLIB 候選資料建立成 <select> 選項。
+//
+// 如果沒有候選，選單會自動隱藏。
+// ========================================
+function updateLyricCandidateSelect(
+    candidates,
+    selectedCandidate
+) {
+
+    console.log(
+        "📚 更新 LRCLIB 候選選單：",
+        candidates
+    );
+
+    if (
+        !lyricCandidateSelect
+    ) {
+
+        console.error(
+            "❌ 找不到 lyricCandidateSelect"
+        );
+
+        return;
+    }
+
+    // ====================================
+    // 清除舊選項
+    // ====================================
+    lyricCandidateSelect.innerHTML = "";
+
+    // ====================================
+    // 沒有候選 → 隱藏選單
+    // ====================================
+    if (
+        !Array.isArray(candidates) ||
+        candidates.length === 0
+    ) {
+
+        lyricCandidateSelect.style.display =
+            "none";
+
+        lyricCandidates = [];
+
+        selectedLyricCandidate =
+            null;
+
+        return;
+    }
+
+    // ====================================
+    // 保存候選資料
+    // ====================================
+    lyricCandidates =
+        candidates;
+
+    selectedLyricCandidate =
+        selectedCandidate || null;
+
+    // ====================================
+    // 建立每一個候選選項
+    // ====================================
+    candidates.forEach(
+        (candidate, index) => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                candidate.id;
+
+            // =================================
+            // 顯示名稱
+            // =================================
+            //
+            // 格式：
+            //
+            // ① 歌名 - 歌手
+            //
+            // 如果有專輯，也一起顯示。
+            // =================================
+
+            let label =
+                `${candidate.trackName || "未知歌曲"}`
+                + ` - `
+                + `${candidate.artistName || "未知歌手"}`;
+
+            if (
+                candidate.albumName
+            ) {
+
+                label +=
+                    ` [${candidate.albumName}]`;
+            }
+
+            // 顯示是否有同步歌詞
+            if (
+                candidate.hasSyncedLyrics
+            ) {
+
+                label +=
+                    " 🎵";
+
+            } else if (
+                candidate.hasPlainLyrics
+            ) {
+
+                label +=
+                    " 📝";
+            }
+
+            option.textContent =
+                `${index + 1}. ${label}`;
+
+            // =================================
+            // 設定目前選中的候選
+            // =================================
+            if (
+                selectedCandidate &&
+                String(
+                    selectedCandidate.id
+                ) ===
+                String(candidate.id)
+            ) {
+
+                option.selected =
+                    true;
+            }
+
+            lyricCandidateSelect.appendChild(
+                option
+            );
+        }
+    );
+
+    // ====================================
+    // 顯示選單
+    // ====================================
+    lyricCandidateSelect.style.display =
+        "inline-block";
+
+    console.log(
+        "✅ LRCLIB 候選選單建立完成，共",
+        candidates.length,
+        "筆"
+    );
+}
+
+// ========================================
+// LRCLIB 候選選擇事件
+// ========================================
+//
+// 使用者在下拉選單選擇其他歌詞後：
+//
+// lyrics.js
+//     ↓
+// Background
+//     ↓
+// content.js
+//
+// 真正的歌詞切換由 content.js 完成。
+// ========================================
+if (lyricCandidateSelect) {
+    lyricCandidateSelect.addEventListener(
+        "change",
+        () => {
+
+            const candidateId =
+                lyricCandidateSelect.value;
+
+            console.log(
+                "🎯 使用者選擇 LRCLIB 候選：",
+                candidateId
+            );
+
+            if (!candidateId) {
+                return;
+            }
+
+            // =================================
+            // 找到目前選中的候選
+            // =================================
+            const candidate =
+                lyricCandidates.find(
+                    (item) =>
+                        String(item.id) ===
+                        String(candidateId)
+                );
+
+            if (
+                candidate
+            ) {
+
+                selectedLyricCandidate =
+                    candidate;
+            }
+
+            // =================================
+            // 傳給 Background
+            // =================================
+            chrome.runtime.sendMessage({
+
+                type:
+                    "selectLyricCandidate",
+
+                candidateId:
+                    candidateId
+
+            });
+        }
+    );
 }
 
 (async () => {

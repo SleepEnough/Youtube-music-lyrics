@@ -9,24 +9,538 @@ let savedLyrics = [];
 let savedCurrentLyric = null;
 
 // ========================================
+// 記錄目前提供歌詞的 YouTube Music 分頁
+// ========================================
+// lyrics.html 是獨立視窗，
+// 它本身不是 YouTube Music 分頁。
+//
+// 因此當使用者在 lyrics.html 選擇
+// LRCLIB 候選歌詞時，Background 必須知道
+// 要把切換要求送回哪一個 YTM 分頁。
+// ========================================
+let lastYtmTabId = null;
+
+// ========================================
+// 記錄目前歌詞搜尋的 Load ID
+// ========================================
+// 避免舊歌曲的候選切換要求
+// 被送到目前歌曲。
+// ========================================
+let lastLyricLoadId = null;
+
+// ========================================
+// 目前歌曲的 LRCLIB 候選歌詞
+// ========================================
+//
+// Background 會暫存這些資料，
+// 讓 lyrics.html 開啟或重新載入時，
+// 仍然可以取得目前歌曲的候選。
+// ========================================
+let savedLyricCandidates = [];
+let savedSelectedLyricCandidate = null;
+
+// ========================================
 // 歌詞視窗 ID
 // ========================================
-
 let lyricsWindowId = null;
 
 // ========================================
 // 是否正在建立歌詞視窗
 // 防止多次 openLyricsWindow 同時建立視窗
 // ========================================
-
 let lyricsWindowCreating = false;
+
+async function testSearchLRCLIB(trackName, artistName, albumName = null) {
+    const params = new URLSearchParams();
+
+    params.set("track_name", trackName);
+    params.set("artist_name", artistName);
+
+    if (albumName) {
+        params.set("album_name", albumName);
+    }
+
+    const url =
+        `https://lrclib.net/api/search?${params.toString()}`;
+
+    console.log("🔎 LRCLIB Search URL:", url);
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                "Lrclib-Client": "YTM-Lyrics/1.0"
+            }
+        });
+
+        if (!response.ok) {
+            console.error(
+                "❌ LRCLIB Search 失敗:",
+                response.status,
+                response.statusText
+            );
+            return null;
+        }
+
+        const data = await response.json();
+
+        console.log("🔎 LRCLIB Search 結果:", data);
+        console.log(
+            `📚 找到 ${Array.isArray(data) ? data.length : 0} 筆結果`
+        );
+
+        if (Array.isArray(data)) {
+            data.forEach((item, index) => {
+                console.log(
+                    `🎵 候選 ${index + 1}:`,
+                    {
+                        id: item.id,
+                        trackName: item.trackName,
+                        artistName: item.artistName,
+                        albumName: item.albumName,
+                        duration: item.duration,
+                        hasSyncedLyrics:
+                            !!item.syncedLyrics,
+                        hasPlainLyrics:
+                            !!item.plainLyrics
+                    }
+                );
+            });
+        }
+
+        return data;
+
+    } catch (error) {
+        console.error(
+            "❌ LRCLIB Search 發生錯誤:",
+            error
+        );
+
+        return null;
+    }
+}
+
+// ========================================
+// LRCLIB 多候選搜尋
+// ========================================
+// 功能：
+// 使用 LRCLIB /api/search 搜尋歌曲的多筆候選結果。
+// 與 /api/get 不同，/api/search 可以取得多筆
+// 可能符合歌曲名稱與歌手的歌詞。
+// ========================================
+async function searchLRCLIBCandidates(
+    trackName,
+    artistName,
+    albumName = null,
+    duration = null
+) {
+    // ====================================
+    // 建立 LRCLIB Search API URL
+    // ====================================
+    const params = new URLSearchParams();
+
+    params.set(
+        "track_name",
+        trackName
+    );
+
+    params.set(
+        "artist_name",
+        artistName
+    );
+
+    // 如果有專輯名稱，也一起提供
+    if (albumName) {
+        params.set(
+            "album_name",
+            albumName
+        );
+    }
+
+    // ====================================
+    // 建立完整 URL
+    // ====================================
+    const url =
+        `https://lrclib.net/api/search?${params.toString()}`;
+
+    console.log(
+        "🔎 LRCLIB 多候選搜尋 URL：",
+        url
+    );
+
+    try {
+        // ====================================
+        // 呼叫 LRCLIB
+        // ====================================
+        const response = await fetch(
+            url,
+            {
+                headers: {
+                    "Lrclib-Client":
+                        "YTM-Lyrics/1.0"
+                }
+            }
+        );
+
+        // ====================================
+        // API 錯誤
+        // ====================================
+        if (!response.ok) {
+            console.error(
+                "❌ LRCLIB Search API 錯誤：",
+                response.status
+            );
+
+            return [];
+        }
+
+        // ====================================
+        // 取得 JSON
+        // ====================================
+        const results =
+            await response.json();
+
+        // ====================================
+        // 確認結果格式
+        // ====================================
+        if (!Array.isArray(results)) {
+            console.error(
+                "❌ LRCLIB Search 回傳格式不是陣列：",
+                results
+            );
+
+            return [];
+        }
+
+        console.log(
+            "📚 LRCLIB 找到候選：",
+            results.length,
+            "筆"
+        );
+
+        // ====================================
+        // 將候選資料整理成我們自己的格式
+        // ====================================
+        const candidates =
+            results.map((item) => ({
+                id: item.id,
+                trackName:
+                    item.trackName || "",
+                artistName:
+                    item.artistName || "",
+                albumName:
+                    item.albumName || "",
+                duration:
+                    Number.isFinite(
+                        Number(item.duration)
+                    )
+                        ? Number(item.duration)
+                        : null,
+
+                // 是否有同步歌詞
+                hasSyncedLyrics:
+                    Boolean(
+                        item.syncedLyrics
+                    ),
+
+                // 是否有一般歌詞
+                hasPlainLyrics:
+                    Boolean(
+                        item.plainLyrics
+                    ),
+
+                // 保存歌詞內容
+                syncedLyrics:
+                    item.syncedLyrics || null,
+
+                plainLyrics:
+                    item.plainLyrics || null
+            }));
+
+        // ====================================
+        // 顯示候選資料
+        // ====================================
+        candidates.forEach(
+            (candidate, index) => {
+                console.log(
+                    `🎵 候選 ${index + 1}：`,
+                    {
+                        id:
+                            candidate.id,
+                        trackName:
+                            candidate.trackName,
+                        artistName:
+                            candidate.artistName,
+                        albumName:
+                            candidate.albumName,
+                        duration:
+                            candidate.duration,
+                        hasSyncedLyrics:
+                            candidate.hasSyncedLyrics,
+                        hasPlainLyrics:
+                            candidate.hasPlainLyrics
+                    }
+                );
+            }
+        );
+
+        return candidates;
+
+    } catch (error) {
+        console.error(
+            "❌ LRCLIB Search 失敗：",
+            error
+        );
+
+        return [];
+    }
+}
+
+// ========================================
+// LRCLIB 候選歌詞評分
+// ========================================
+// 功能：
+// 根據歌曲名稱、歌手、專輯、duration
+// 判斷哪一筆候選最符合目前歌曲。
+// ========================================
+function scoreLRCLIBCandidate(
+    candidate,
+    trackName,
+    artistName,
+    albumName = null,
+    duration = null
+) {
+    // ====================================
+    // 將文字標準化
+    // ====================================
+    const normalizeText = (text) => {
+        return String(text || "")
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, " ");
+    };
+
+    const targetTrack =
+        normalizeText(trackName);
+
+    const targetArtist =
+        normalizeText(artistName);
+
+    const targetAlbum =
+        normalizeText(albumName);
+
+    const candidateTrack =
+        normalizeText(
+            candidate.trackName
+        );
+
+    const candidateArtist =
+        normalizeText(
+            candidate.artistName
+        );
+
+    const candidateAlbum =
+        normalizeText(
+            candidate.albumName
+        );
+
+    // ====================================
+    // 初始分數
+    // ====================================
+    let score = 0;
+
+    // ====================================
+    // 歌曲名稱
+    // ====================================
+    if (
+        candidateTrack === targetTrack
+    ) {
+        score += 50;
+    } else if (
+        candidateTrack.includes(
+            targetTrack
+        ) ||
+        targetTrack.includes(
+            candidateTrack
+        )
+    ) {
+        score += 25;
+    }
+
+    // ====================================
+    // 歌手
+    // ====================================
+    if (
+        candidateArtist === targetArtist
+    ) {
+        score += 40;
+    } else if (
+        candidateArtist.includes(
+            targetArtist
+        ) ||
+        targetArtist.includes(
+            candidateArtist
+        )
+    ) {
+        score += 20;
+    }
+
+    // ====================================
+    // 專輯
+    // ====================================
+    if (
+        targetAlbum &&
+        candidateAlbum
+    ) {
+        if (
+            candidateAlbum ===
+            targetAlbum
+        ) {
+            score += 20;
+        } else if (
+            candidateAlbum.includes(
+                targetAlbum
+            ) ||
+            targetAlbum.includes(
+                candidateAlbum
+            )
+        ) {
+            score += 10;
+        }
+    }
+
+    // ====================================
+    // duration
+    // ====================================
+    if (
+        Number.isFinite(duration) &&
+        Number.isFinite(
+            candidate.duration
+        )
+    ) {
+        const difference =
+            Math.abs(
+                duration -
+                candidate.duration
+            );
+
+        // 完全相同
+        if (difference < 1) {
+            score += 30;
+        }
+
+        // 差距小於 3 秒
+        else if (difference < 3) {
+            score += 20;
+        }
+
+        // 差距小於 10 秒
+        else if (difference < 10) {
+            score += 10;
+        }
+    }
+
+    // ====================================
+    // 優先同步歌詞
+    // ====================================
+    if (
+        candidate.hasSyncedLyrics
+    ) {
+        score += 20;
+    } else if (
+        candidate.hasPlainLyrics
+    ) {
+        score += 5;
+    }
+
+    return score;
+}
+
+// ========================================
+// 從 LRCLIB 候選中選出最佳結果
+// ========================================
+function selectBestLRCLIBCandidate(
+    candidates,
+    trackName,
+    artistName,
+    albumName = null,
+    duration = null
+) {
+    // 沒有候選
+    if (
+        !Array.isArray(candidates) ||
+        candidates.length === 0
+    ) {
+        return null;
+    }
+
+    // ====================================
+    // 計算每一筆候選的分數
+    // ====================================
+    const scoredCandidates =
+        candidates.map(
+            (candidate) => ({
+                candidate,
+                score:
+                    scoreLRCLIBCandidate(
+                        candidate,
+                        trackName,
+                        artistName,
+                        albumName,
+                        duration
+                    )
+            })
+        );
+
+    // ====================================
+    // 分數由高到低排序
+    // ====================================
+    scoredCandidates.sort(
+        (a, b) =>
+            b.score - a.score
+    );
+
+    // ====================================
+    // 顯示評分結果
+    // ====================================
+    console.log(
+        "📊 LRCLIB 候選評分：",
+        scoredCandidates.map(
+            (item) => ({
+                id:
+                    item.candidate.id,
+                trackName:
+                    item.candidate.trackName,
+                artistName:
+                    item.candidate.artistName,
+                duration:
+                    item.candidate.duration,
+                score:
+                    item.score
+            })
+        )
+    );
+
+    // ====================================
+    // 取得最高分候選
+    // ====================================
+    const best =
+        scoredCandidates[0];
+
+    console.log(
+        "🏆 LRCLIB 最佳候選：",
+        best.candidate,
+        "分數：",
+        best.score
+    );
+
+    return best.candidate;
+}
 
 // ========================================
 // 尋找已經存在的歌詞視窗
 // 用來處理 Service Worker 重啟後
 // lyricsWindowId 遺失的情況
 // ========================================
-
 async function findExistingLyricsWindow() {
 
     try {
@@ -85,7 +599,6 @@ async function findExistingLyricsWindow() {
 // ========================================
 // 取得歌詞視窗的 Tab
 // ========================================
-
 async function getLyricsWindowTab() {
 
     if (lyricsWindowId === null) {
@@ -123,7 +636,6 @@ async function getLyricsWindowTab() {
 // ========================================
 // 安全傳送訊息給歌詞視窗
 // ========================================
-
 async function sendMessageToLyricsWindow(message) {
     // ====================================
     // 最多嘗試 10 次
@@ -178,7 +690,7 @@ async function sendMessageToLyricsWindow(message) {
                 message
             );
 
-            console.log("📤 已成功傳送給歌詞視窗：", message.type);
+            // console.log("📤 已成功傳送給歌詞視窗：", message.type);
 
             return true;
 
@@ -201,19 +713,14 @@ async function sendMessageToLyricsWindow(message) {
 // ========================================
 // 歌詞視窗位置
 // ========================================
-
 let lyricsWindowLeft = null;
-
 let lyricsWindowTop = null;
 
 // ========================================
 // IndexedDB 設定
 // ========================================
-
 const DB_NAME = "YTM-Lyrics";
-
 const STORE_NAME = "settings";
-
 
 // ========================================
 // 開啟資料庫
@@ -699,7 +1206,6 @@ async function findLyricsFile(fileName)
 // ========================================
 // LRCLIB API
 // ========================================
-
 const LRCLIB_API_URL = "https://lrclib.net/api/get";
 
 // ========================================
@@ -804,7 +1310,6 @@ async function searchLyricsFromLRCLIB(trackName, artistName, albumName = null, d
 // ========================================
 // 解析 LRC 歌詞
 // ========================================
-
 function parseLRCLyrics(
     lrcText
 ) {
@@ -899,7 +1404,6 @@ function parseLRCLyrics(
 // ========================================
 // 儲存並更新目前歌詞
 // ========================================
-
 async function updateSavedLyrics(lyrics) {
     // ====================================
     // 確認歌詞格式
@@ -948,7 +1452,7 @@ async function updateSavedLyrics(lyrics) {
 // ========================================
 chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
-        console.log("📨 Background 收到訊息：",message);
+        // console.log("📨 Background 收到訊息：",message);
 
         // ========================================
         // 開啟歌詞視窗
@@ -1310,21 +1814,17 @@ chrome.runtime.onMessage.addListener(
         // 收到目前播放歌詞
         // ========================================
         if (message.type === "updateCurrentLyric"){
-            console.log(
-                "🎵 Background 收到目前歌詞：",
-                message.lyric
-            );
-
+            // console.log("🎵 Background 收到目前歌詞：", message.lyric);
 
             // 記住目前播放的歌詞
             savedCurrentLyric =
                 message.lyric;
 
 
-            console.log(
-                "💾 目前歌詞已儲存：",
-                savedCurrentLyric.text
-            );
+            // console.log(
+            //     "💾 目前歌詞已儲存：",
+            //     savedCurrentLyric.text
+            // );
 
             // ====================================
             // 通知歌詞視窗
@@ -1338,6 +1838,116 @@ chrome.runtime.onMessage.addListener(
                     savedCurrentLyric
 
             });
+
+            return;
+        }
+
+        // ========================================
+        // 接收 lyrics.js 的候選歌詞切換要求
+        // ========================================
+        //
+        // lyrics.js
+        //     ↓
+        // Background
+        //     ↓
+        // content.js
+        //
+        // Background 不負責實際切換歌詞，
+        // 只負責把要求送回正確的 YTM 分頁。
+        // ========================================
+        if (message.type === "selectLyricCandidate") {
+
+            console.log(
+                "📨 Background 收到候選切換要求：",
+                message
+            );
+
+            // ====================================
+            // 確認目前有記錄 YTM 分頁
+            // ====================================
+            if (
+                !Number.isInteger(
+                    lastYtmTabId
+                )
+            ) {
+
+                console.error(
+                    "❌ 找不到目前的 YTM 分頁 ID"
+                );
+
+                return;
+            }
+
+            // ====================================
+            // 確認 Load ID
+            // ====================================
+            //
+            // 如果 message 帶有 loadId，
+            // 就確認它是否仍然是目前歌曲。
+            //
+            // 這可以避免使用者切歌後，
+            // 舊的候選切換要求誤套用到新歌曲。
+            // ====================================
+            if (
+                message.loadId !== undefined &&
+                message.loadId !== null &&
+                lastLyricLoadId !== null &&
+                String(message.loadId) !==
+                    String(lastLyricLoadId)
+            ) {
+
+                console.warn(
+                    "⚠️ 忽略舊歌曲的候選切換要求：",
+                    {
+                        messageLoadId:
+                            message.loadId,
+
+                        currentLoadId:
+                            lastLyricLoadId
+                    }
+                );
+
+                return;
+            }
+
+            console.log(
+                "📤 Background → content.js",
+                {
+                    tabId:
+                        lastYtmTabId,
+
+                    candidateId:
+                        message.candidateId,
+
+                    loadId:
+                        message.loadId
+                }
+            );
+
+            // ====================================
+            // 將候選切換要求送回 content.js
+            // ====================================
+            chrome.tabs.sendMessage(
+                lastYtmTabId,
+                {
+                    type:
+                        "selectLyricCandidate",
+
+                    candidateId:
+                        message.candidateId,
+
+                    loadId:
+                        message.loadId
+                }
+            ).catch(
+                (error) => {
+
+                    console.error(
+                        "❌ 無法將候選切換要求送到 content.js：",
+                        error
+                    );
+                }
+            );
 
             return;
         }
@@ -1363,12 +1973,31 @@ chrome.runtime.onMessage.addListener(
             // ====================================
             // 通知歌詞視窗清空畫面
             // ====================================
-
             sendMessageToLyricsWindow({
                 type:
                     "lyricsUpdated",
                 lyrics:
                     []
+            });
+
+            // ========================================
+            // 清除上一首歌曲的 LRCLIB 候選
+            // ========================================
+            savedLyricCandidates = [];
+
+            savedSelectedLyricCandidate =
+                null;
+
+            console.log("🧹 已清除上一首歌曲的 LRCLIB 候選");
+
+            sendMessageToLyricsWindow({
+
+                type:
+                    "lyricCandidatesUpdated",
+
+                candidates: [],
+
+                selectedCandidate: null
             });
 
             return;
@@ -1380,10 +2009,11 @@ chrome.runtime.onMessage.addListener(
         if (message.type === "lyricDisplaySettingChanged"){
             console.log("🎨 收到歌詞顯示設定變更：", message.setting, message.value);
 
-            chrome.runtime.sendMessage({
+            sendMessageToLyricsWindow({
                 type:"lyricDisplaySettingChanged",
                 setting:message.setting,
-                value:message.value});
+                value:message.value
+            });
 
             return;
         }
@@ -1405,124 +2035,503 @@ chrome.runtime.onMessage.addListener(
                 savedCurrentLyric
             );
 
+            // ========================================
+            // 回傳目前歌詞資料
+            // ========================================
+            //
+            // 除了目前歌詞與目前播放句之外，
+            // 一併回傳目前歌曲的 LRCLIB 候選。
+            //
+            // 這樣 lyrics.html 即使是在 LRCLIB
+            // 搜尋完成後才開啟，也能取得候選。
+            // ========================================
             sendResponse({
+
                 lyrics:
                     savedLyrics,
+
                 currentLyric:
-                    savedCurrentLyric
+                    savedCurrentLyric,
+
+                candidates:
+                    savedLyricCandidates,
+
+                selectedCandidate:
+                    savedSelectedLyricCandidate
+
             });
 
 
             return true;
         }
 
-        // ==================================
-        // 搜尋歌詞
+        // ========================================
+        // 搜尋歌曲歌詞
+        // ========================================
+        // 搜尋順序：
+        // ① 本機 LRC
+        // ② LRCLIB 多候選搜尋
         //
-        // ① 先搜尋本地 LRC
-        // ② 找不到時自動搜尋 LRCLIB
-        // ==================================
+        // LRCLIB 找到多筆時：
+        // - 自動選出最佳候選
+        // - 將所有候選一起回傳
+        //
+        // Load ID 會原封不動帶回 content.js，
+        // 讓 content.js 確認搜尋結果是否仍屬於目前歌曲。
+        // ========================================
         if (message.type === "searchLyrics") {
-            console.log("🔍 Background 開始搜尋歌詞：", message.songTitle, "Load ID：", message.loadId);
 
-            console.log(
-                "🆔 Background 收到的訊息物件：",
-                message
-            );
+            console.log("📨 Background 收到 searchLyrics：", message);
 
-            return (async () => {
+            // ====================================
+            // 使用 async IIFE
+            //
+            // 因為 onMessage listener 本身
+            // 需要 return true 保留 sendResponse。
+            // ====================================
+            (async () => {
                 try {
-                    console.log("📁 先搜尋本機 LRC：", message.songTitle);
+                    // ====================================
+                    // 取得歌曲資訊
+                    // ====================================
+                    const songTitle =
+                        message.songTitle || "";
 
-                    const localResult = await searchLyricsFile(message.songTitle);
+                    const artistName =
+                        message.artistName || "";
 
-                    if (localResult) {
-                        const result = {
-                            success: true,
-                            source: "local",
-                            fileName: localResult.fileName,
-                            text: localResult.text,
-                            loadId: message.loadId
-                        };
+                    const albumName =
+                        message.albumName || null;
 
-                        console.log("📤 Background 回傳本機 LRC：", result);
+                    const duration =
+                        Number.isFinite(
+                            Number(message.duration)
+                        )
+                            ? Number(message.duration)
+                            : null;
 
-                        return result;
-                    }
+                    const loadId =
+                        message.loadId;
 
-                    console.log("🌐 本機沒有找到 LRC，改搜尋 LRCLIB");
+                    // ========================================
+                    // 記錄這次搜尋來自哪一個 YTM 分頁
+                    // ========================================
+                    //
+                    // sender.tab.id 就是 content.js 所在的
+                    // YouTube Music 分頁 ID。
+                    //
+                    // 之後 lyrics.js 選擇候選歌詞時，
+                    // Background 就能把要求送回這個分頁。
+                    // ========================================
+                    if (
+                        sender &&
+                        sender.tab &&
+                        Number.isInteger(sender.tab.id)
+                    ) {
 
-                    const lrclibResult =
-                        await searchLyricsFromLRCLIB(
-                            message.songTitle,
-                            message.artistName,
-                            message.albumName,
-                            message.duration
-                        );
+                        lastYtmTabId =
+                            sender.tab.id;
 
-                    if (!lrclibResult) {
                         console.log(
-                            "❌ 本機 LRC 與 LRCLIB 都找不到同步歌詞"
+                            "📌 記錄 YTM 分頁 ID：",
+                            lastYtmTabId
                         );
-
-                        return {
-                            success: false,
-                            source: null,
-                            fileName: null,
-                            text: null,
-                            loadId: message.loadId
-                        };
-                    }
-                    if (lrclibResult.type === "plain") {
-                        console.log("📝 使用 LRCLIB 一般歌詞");
-                        console.log(
-                            "📊 LRCLIB 一般歌詞長度：",
-                            lrclibResult.plainLyrics?.length
-                        );
-
-                        const result = {
-                            success: true,
-                            source: "lrclib",
-                            lyricType: "plain",
-                            fileName: null,
-                            text: lrclibResult.plainLyrics,
-                            loadId: message.loadId
-                        };
-
-                        console.log("📤 Background 回傳 LRCLIB 一般歌詞結果：", result);
-                        return result;
                     }
 
-                    console.log("✅ LRCLIB 找到同步歌詞");
+                    // ========================================
+                    // 記錄目前歌曲的 Load ID
+                    // ========================================
+                    lastLyricLoadId =
+                        loadId;
+
                     console.log(
-                        "📊 LRCLIB 同步歌詞長度：",
-                        lrclibResult.syncedLyrics?.length
+                        "📌 記錄目前歌詞 Load ID：",
+                        lastLyricLoadId
                     );
 
-                    const result = {
-                        success: true,
-                        source: "lrclib",
-                        lyricType: "synced",
-                        fileName: null,
-                        text: lrclibResult.syncedLyrics,
-                        loadId: message.loadId
-                    };
+                    console.log(
+                        "🔍 開始搜尋歌詞：",
+                        {
+                            songTitle,
+                            artistName,
+                            albumName,
+                            duration,
+                            loadId
+                        }
+                    );
 
-                    console.log("📤 Background 回傳 LRCLIB 同步歌詞結果：", result);
-                    return result;
+                    // ====================================
+                    // 第一階段：
+                    // 搜尋本機 LRC
+                    // ====================================
+                    const localResult =
+                        await searchLyricsFile(
+                            songTitle
+                        );
+
+                    // ====================================
+                    // 找到本機 LRC
+                    // ====================================
+                    if (localResult) {
+
+                        console.log(
+                            "💾 找到本機 LRC：",
+                            localResult.fileName
+                        );
+
+                        // ========================================
+                        // 本機 LRC 不使用 LRCLIB 候選
+                        // ========================================
+                        savedLyricCandidates = [];
+
+                        savedSelectedLyricCandidate =
+                            null;
+
+                        // 通知歌詞視窗清除候選選單
+                        sendMessageToLyricsWindow({
+
+                            type:
+                                "lyricCandidatesUpdated",
+
+                            candidates: [],
+
+                            selectedCandidate: null
+                        });
+
+                        // ====================================
+                        // 本機 LRC 不需要候選選單。
+                        //
+                        // 因為目前本機搜尋是：
+                        // 歌曲名稱 → 精確檔名
+                        // ====================================
+                        sendResponse({
+
+                            success: true,
+
+                            source: "local",
+
+                            fileName:
+                                localResult.fileName,
+
+                            text:
+                                localResult.text,
+
+                            lyricType:
+                                "synced",
+
+                            loadId,
+
+                            // ==================================
+                            // Local LRC 沒有 LRCLIB 候選
+                            // ==================================
+                            candidates: [],
+
+                            selectedCandidate: null
+
+                        });
+
+                        return;
+                    }
+
+                    // ====================================
+                    // 第二階段：
+                    // LRCLIB 多候選搜尋
+                    // ====================================
+                    console.log(
+                        "🌐 找不到本機 LRC，開始搜尋 LRCLIB 多候選"
+                    );
+
+                    const candidates =
+                        await searchLRCLIBCandidates(
+                            songTitle,
+                            artistName,
+                            albumName,
+                            duration
+                        );
+
+                    // ====================================
+                    // LRCLIB 沒有任何候選
+                    // ====================================
+                    if (
+                        !Array.isArray(candidates) ||
+                        candidates.length === 0
+                    ) {
+
+                        console.log(
+                            "❌ LRCLIB 找不到任何候選歌詞：",
+                            songTitle
+                        );
+
+                        // ========================================
+                        // 清除上一首歌曲留下的候選
+                        // ========================================
+                        savedLyricCandidates = [];
+
+                        savedSelectedLyricCandidate =
+                            null;
+
+                        console.log(
+                            "🧹 Background 已清除 LRCLIB 候選"
+                        );
+
+                        // ========================================
+                        // 通知歌詞視窗清除候選選單
+                        // ========================================
+                        sendMessageToLyricsWindow({
+
+                            type:
+                                "lyricCandidatesUpdated",
+
+                            candidates: [],
+
+                            selectedCandidate: null
+
+                        });
+
+                        sendResponse({
+
+                            success: false,
+
+                            source: "lrclib",
+
+                            loadId,
+
+                            candidates: [],
+
+                            selectedCandidate: null
+
+                        });
+
+                        return;
+                    }
+
+                    // ====================================
+                    // 選出最佳候選
+                    // ====================================
+                    const bestCandidate =
+                        selectBestLRCLIBCandidate(
+                            candidates,
+                            songTitle,
+                            artistName,
+                            albumName,
+                            duration
+                        );
+
+                    // ====================================
+                    // 確認最佳候選存在
+                    // ====================================
+                    if (!bestCandidate) {
+
+                        console.error(
+                            "❌ 無法選出 LRCLIB 最佳候選：",
+                            songTitle
+                        );
+
+                        sendResponse({
+
+                            success: false,
+
+                            source: "lrclib",
+
+                            loadId,
+
+                            candidates,
+
+                            selectedCandidate: null
+
+                        });
+
+                        return;
+                    }
+
+                    // ========================================
+                    // 保存目前歌曲的 LRCLIB 候選
+                    // ========================================
+                    //
+                    // 這非常重要。
+                    //
+                    // content.js 雖然會收到 candidates，
+                    // 但 lyrics.html 是獨立視窗，
+                    // 它之後可能才透過 requestLyrics
+                    // 向 Background 要目前資料。
+                    //
+                    // 因此 Background 必須自己保存一份。
+                    // ========================================
+                    savedLyricCandidates =
+                        Array.isArray(candidates)
+                            ? candidates
+                            : [];
+
+                    savedSelectedLyricCandidate =
+                        bestCandidate;
+
+                    console.log(
+                        "💾 Background 保存 LRCLIB 候選：",
+                        savedLyricCandidates.length,
+                        "筆"
+                    );
+
+                    console.log(
+                        "🎯 Background 保存目前選中的候選：",
+                        savedSelectedLyricCandidate
+                    );
+
+                    // ========================================
+                    // 如果歌詞視窗已經存在，
+                    // 立即更新候選下拉選單
+                    // ========================================
+                    sendMessageToLyricsWindow({
+
+                        type:
+                            "lyricCandidatesUpdated",
+
+                        candidates:
+                            savedLyricCandidates,
+
+                        selectedCandidate:
+                            savedSelectedLyricCandidate
+                    });
+
+                    // ====================================
+                    // 判斷最佳候選的歌詞類型
+                    // ====================================
+                    let lyricType = null;
+                    let lyricText = null;
+
+                    // 優先使用同步歌詞
+                    if (
+                        bestCandidate.syncedLyrics
+                    ) {
+
+                        lyricType = "synced";
+
+                        lyricText =
+                            bestCandidate.syncedLyrics;
+
+                    }
+
+                    // 沒有同步歌詞才使用一般歌詞
+                    else if (
+                        bestCandidate.plainLyrics
+                    ) {
+
+                        lyricType = "plain";
+
+                        lyricText =
+                            bestCandidate.plainLyrics;
+
+                    }
+
+                    // ====================================
+                    // 候選存在，但是完全沒有歌詞
+                    // ====================================
+                    if (!lyricText) {
+
+                        console.log(
+                            "⚠️ 最佳候選沒有可使用的歌詞：",
+                            bestCandidate
+                        );
+
+                        sendResponse({
+
+                            success: false,
+
+                            source: "lrclib",
+
+                            loadId,
+
+                            candidates,
+
+                            selectedCandidate:
+                                bestCandidate
+
+                        });
+
+                        return;
+                    }
+
+                    // ====================================
+                    // 成功
+                    // ====================================
+                    console.log(
+                        "✅ LRCLIB 最佳候選歌詞準備完成：",
+                        {
+                            id:
+                                bestCandidate.id,
+
+                            trackName:
+                                bestCandidate.trackName,
+
+                            artistName:
+                                bestCandidate.artistName,
+
+                            albumName:
+                                bestCandidate.albumName,
+
+                            duration:
+                                bestCandidate.duration,
+
+                            lyricType
+                        }
+                    );
+
+                    // ====================================
+                    // 回傳給 content.js
+                    // ====================================
+                    sendResponse({
+
+                        success: true,
+
+                        source: "lrclib",
+
+                        fileName: null,
+
+                        text: lyricText,
+
+                        lyricType,
+
+                        loadId,
+
+                        // ==================================
+                        // 所有候選
+                        // ==================================
+                        candidates,
+
+                        // ==================================
+                        // 自動選中的候選
+                        // ==================================
+                        selectedCandidate:
+                            bestCandidate
+
+                    });
 
                 } catch (error) {
-                    console.error("❌ 搜尋歌詞失敗：", error);
 
-                    return {
+                    console.error(
+                        "❌ searchLyrics 發生錯誤：",
+                        error
+                    );
+
+                    sendResponse({
+
                         success: false,
-                        source: null,
-                        fileName: null,
-                        text: null,
-                        loadId: message.loadId
-                    };
+
+                        loadId:
+                            message.loadId,
+
+                        candidates: [],
+
+                        selectedCandidate: null
+
+                    });
                 }
+
             })();
+
+            // ====================================
+            // 非同步 sendResponse
+            // ====================================
+            return true;
         }
 
         // ==================================
@@ -1568,67 +2577,34 @@ chrome.runtime.onMessage.addListener(
             return true;
         }
 
+        if (message.type === "testLRCLIBSearch") {
+            (async () => {
+                try {
+                    const results = await testSearchLRCLIB(
+                        message.trackName,
+                        message.artistName,
+                        message.albumName || null
+                    );
 
-        // ==================================
-        // 測試 LRCLIB 同步歌詞解析
-        // ==================================
-        if (message.type === "testLRCLIBLyrics") {
-
-            searchLyricsFromLRCLIB(
-                message.trackName,
-                message.artistName,
-                message.albumName,
-                message.duration
-            )
-            .then((result) => {
-
-                if (!result) {
+                    sendResponse({
+                        success: Array.isArray(results),
+                        results: results || []
+                    });
+                } catch (error) {
+                    console.error(
+                        "❌ LRCLIB Search 測試失敗：",
+                        error
+                    );
 
                     sendResponse({
                         success: false,
-                        lyrics: []
+                        results: []
                     });
-
-                    return;
                 }
-
-                const lyrics =
-                    parseLRCLyrics(
-                        result.syncedLyrics
-                    );
-
-                console.log(
-                    "📦 解析後歌詞：",
-                    lyrics
-                );
-
-                updateSavedLyrics(
-                    lyrics
-                );
-
-                sendResponse({
-                    success: true,
-                    lyrics: lyrics
-                });
-
-            })
-            .catch((error) => {
-
-                console.error(
-                    "❌ LRCLIB 歌詞解析測試失敗：",
-                    error
-                );
-
-                sendResponse({
-                    success: false,
-                    lyrics: []
-                });
-
-            });
+            })();
 
             return true;
         }
-
     }
 );
 
