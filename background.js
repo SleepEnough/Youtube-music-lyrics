@@ -50,6 +50,243 @@ let lyricsWindowId = null;
 // ========================================
 let lyricsWindowCreating = false;
 
+// ========================================
+// 工具列按鈕：開啟 / 叫回歌詞視窗
+// ========================================
+async function openOrFocusLyricsWindow() {
+
+    console.log("🖱️ 點擊 YTM Lyrics 工具列按鈕");
+
+    // ====================================
+    // 防止同時建立多個歌詞視窗
+    // ====================================
+    if (lyricsWindowCreating) {
+
+        console.log(
+            "⏳ 歌詞視窗正在建立中，忽略這次要求"
+        );
+
+        return;
+    }
+
+    // ====================================
+    // ① 已經有記錄的歌詞視窗
+    // ====================================
+    if (lyricsWindowId !== null) {
+
+        try {
+
+            const existingWindow =
+                await chrome.windows.get(
+                    lyricsWindowId
+                );
+
+            console.log(
+                "♻️ 找到目前歌詞視窗：",
+                lyricsWindowId
+            );
+
+            // ==================================
+            // 如果最小化，先還原
+            // ==================================
+            if (
+                existingWindow.state ===
+                "minimized"
+            ) {
+
+                await chrome.windows.update(
+                    lyricsWindowId,
+                    {
+                        state: "normal"
+                    }
+                );
+            }
+
+            // ==================================
+            // 把歌詞視窗帶到最前面
+            // ==================================
+            await chrome.windows.update(
+                lyricsWindowId,
+                {
+                    focused: true
+                }
+            );
+
+            console.log(
+                "🎯 已將歌詞視窗帶到前景"
+            );
+
+            return;
+
+        } catch (error) {
+
+            console.log(
+                "⚠️ 原歌詞視窗已不存在，清除舊 ID"
+            );
+
+            lyricsWindowId = null;
+        }
+    }
+
+    // ====================================
+    // ② lyricsWindowId 不存在
+    // 嘗試尋找實際存在的 lyrics.html
+    // ====================================
+    const existingWindow =
+        await findExistingLyricsWindow();
+
+    if (existingWindow) {
+
+        console.log(
+            "♻️ 找到既有歌詞視窗：",
+            lyricsWindowId
+        );
+
+        // ==================================
+        // 如果最小化，先還原
+        // ==================================
+        if (
+            existingWindow.state ===
+            "minimized"
+        ) {
+
+            await chrome.windows.update(
+                lyricsWindowId,
+                {
+                    state: "normal"
+                }
+            );
+        }
+
+        // ==================================
+        // 帶到前景
+        // ==================================
+        await chrome.windows.update(
+            lyricsWindowId,
+            {
+                focused: true
+            }
+        );
+
+        console.log(
+            "🎯 已將既有歌詞視窗帶到前景"
+        );
+
+        return;
+    }
+
+    // ====================================
+    // ③ 確定沒有歌詞視窗
+    // 建立新的
+    // ====================================
+    lyricsWindowCreating = true;
+
+    try {
+
+        // ==================================
+        // 讀取上次位置與大小
+        // ==================================
+        const [position, size] =
+            await Promise.all([
+                loadLyricsWindowPosition(),
+                loadLyricsWindowSize()
+            ]);
+
+        console.log(
+            "📍 上次位置：",
+            position
+        );
+
+        console.log(
+            "📐 上次大小：",
+            size
+        );
+
+        // ==================================
+        // 建立視窗設定
+        // ==================================
+        const windowOptions = {
+
+            url:
+                chrome.runtime.getURL(
+                    "lyrics.html"
+                ),
+
+            type:
+                "popup",
+
+            width:
+                500,
+
+            height:
+                700
+        };
+
+        // ==================================
+        // 套用上次位置
+        // ==================================
+        if (position) {
+
+            windowOptions.left =
+                position.left;
+
+            windowOptions.top =
+                position.top;
+        }
+
+        // ==================================
+        // 套用上次大小
+        // ==================================
+        if (size) {
+
+            windowOptions.width =
+                size.width;
+
+            windowOptions.height =
+                size.height;
+        }
+
+        // ==================================
+        // 建立歌詞視窗
+        // ==================================
+        const newWindow =
+            await chrome.windows.create(
+                windowOptions
+            );
+
+        // ==================================
+        // 記住視窗 ID
+        // ==================================
+        lyricsWindowId =
+            newWindow.id;
+
+        console.log(
+            "🆕 歌詞視窗已建立，ID：",
+            lyricsWindowId
+        );
+
+    } catch (error) {
+
+        console.error(
+            "❌ 建立歌詞視窗失敗：",
+            error
+        );
+
+    } finally {
+
+        lyricsWindowCreating = false;
+    }
+}
+
+// ========================================
+// 點擊瀏覽器工具列的 YTM Lyrics 圖示
+// ========================================
+chrome.action.onClicked.addListener(
+    () => {
+        openOrFocusLyricsWindow();
+    }
+);
+
 async function testSearchLRCLIB(trackName, artistName, albumName = null) {
     const params = new URLSearchParams();
 
