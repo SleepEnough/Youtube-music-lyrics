@@ -308,83 +308,83 @@ function highlightCurrentLyric(lyric){
 // 歌詞視窗拖曳功能
 // ========================================
 document.addEventListener("DOMContentLoaded",async () => {
-    console.log("開始初始化視窗拖曳功能");
+    // console.log("開始初始化視窗拖曳功能");
 
-    // ====================================
-    // 找到控制列
-    // ====================================
-    const titleBar = document.querySelector("#titleBar");
+    // // ====================================
+    // // 找到控制列
+    // // ====================================
+    // const titleBar = document.querySelector("#titleBar");
 
-    // 確認控制列是否存在
-    if (!titleBar) {
-        console.error("❌ 找不到 #titleBar");
-        return;
-    }
+    // // 確認控制列是否存在
+    // if (!titleBar) {
+    //     console.error("❌ 找不到 #titleBar");
+    //     return;
+    // }
 
-    console.log("✅ 找到 #titleBar");
+    // console.log("✅ 找到 #titleBar");
 
-    // ====================================
-    // 拖曳狀態
-    // ====================================
-    let isDragging = false;
+    // // ====================================
+    // // 拖曳狀態
+    // // ====================================
+    // let isDragging = false;
 
-    // 滑鼠上一個位置
-    let startMouseX = 0;
-    let startMouseY = 0;
+    // // 滑鼠上一個位置
+    // let startMouseX = 0;
+    // let startMouseY = 0;
 
-    // ====================================
-    // 開始拖曳
-    // ====================================
-    titleBar.addEventListener("mousedown", (event) => {
-        console.log("🖱️ 開始拖曳");
-        isDragging = true;
-        startMouseX = event.screenX;
-        startMouseY = event.screenY;
-    });
+    // // ====================================
+    // // 開始拖曳
+    // // ====================================
+    // titleBar.addEventListener("mousedown", (event) => {
+    //     console.log("🖱️ 開始拖曳");
+    //     isDragging = true;
+    //     startMouseX = event.screenX;
+    //     startMouseY = event.screenY;
+    // });
 
-    // ====================================
-    // 滑鼠移動
-    // ====================================
-    document.addEventListener("mousemove", (event) => {
-        // 沒有拖曳就不處理
-        if (!isDragging){
-            return;
-        }
+    // // ====================================
+    // // 滑鼠移動
+    // // ====================================
+    // document.addEventListener("mousemove", (event) => {
+    //     // 沒有拖曳就不處理
+    //     if (!isDragging){
+    //         return;
+    //     }
 
-        // 計算移動距離
-        const deltaX = event.screenX - startMouseX;
-        const deltaY = event.screenY - startMouseY;
+    //     // 計算移動距離
+    //     const deltaX = event.screenX - startMouseX;
+    //     const deltaY = event.screenY - startMouseY;
 
-        console.log("🖱️ 移動：", deltaX, deltaY);
+    //     console.log("🖱️ 移動：", deltaX, deltaY);
 
-        // 更新滑鼠位置
-        startMouseX = event.screenX;
-        startMouseY = event.screenY;
+    //     // 更新滑鼠位置
+    //     startMouseX = event.screenX;
+    //     startMouseY = event.screenY;
 
-        // ====================================
-        // 傳給 Background
-        // ====================================
-        chrome.runtime.sendMessage({
-            type:"moveLyricsWindow",
-            deltaX:deltaX,
-            deltaY:deltaY});
-    });
+    //     // ====================================
+    //     // 傳給 Background
+    //     // ====================================
+    //     chrome.runtime.sendMessage({
+    //         type:"moveLyricsWindow",
+    //         deltaX:deltaX,
+    //         deltaY:deltaY});
+    // });
 
-    // ====================================
-    // 滑鼠放開
-    // ====================================
-    document.addEventListener("mouseup", () => {
-        if (!isDragging) {
-            return;
-        }
+    // // ====================================
+    // // 滑鼠放開
+    // // ====================================
+    // document.addEventListener("mouseup", () => {
+    //     if (!isDragging) {
+    //         return;
+    //     }
 
-        console.log("🖱️ 結束拖曳");
+    //     console.log("🖱️ 結束拖曳");
         
-        isDragging = false;
+    //     isDragging = false;
 
-        chrome.runtime.sendMessage({
-            type:"saveLyricsWindowPosition",});
-        });
+    //     chrome.runtime.sendMessage({
+    //         type:"saveLyricsWindowPosition",});
+    //     });
 
     // ====================================
     // 向 Background 要目前歌詞
@@ -738,9 +738,8 @@ function updateLyricCandidateSelect(
         !Array.isArray(candidates) ||
         candidates.length === 0
     ) {
-
         lyricCandidateSelect.style.display =
-            "none";
+        "none";
 
         lyricCandidates = [];
 

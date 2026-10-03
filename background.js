@@ -287,6 +287,20 @@ chrome.action.onClicked.addListener(
     }
 );
 
+function detectLyricType(lrcText) {
+    const lines =
+        lrcText.split(/\r?\n/);
+
+    const hasTimestamp =
+        lines.some(line =>
+            /\[(\d+):(\d+(?:\.\d+)?)\]/.test(line)
+        );
+
+    return hasTimestamp
+        ? "synced"
+        : "plain";
+}
+
 async function testSearchLRCLIB(trackName, artistName, albumName = null) {
     const params = new URLSearchParams();
 
@@ -1230,7 +1244,6 @@ async function searchLyricsFile(
     // ====================================
     // 確認權限
     // ====================================
-
     const permission =
         await folderHandle.queryPermission({
             mode: "read"
@@ -2454,7 +2467,7 @@ chrome.runtime.onMessage.addListener(
                                 localResult.text,
 
                             lyricType:
-                                "synced",
+                                detectLyricType(localResult.text),
 
                             loadId,
 

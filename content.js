@@ -226,6 +226,17 @@ function getSongInfo()
     };
 }
 
+function parsePlainLyrics(text) {
+    return text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line !== "")
+        .map(line => ({
+            time: null,
+            text: line
+        }));
+}
+
 // ========================================
 // 解析 LRC 歌詞
 // ========================================
@@ -483,11 +494,7 @@ async function loadLyricsForSong(
         // 這裡現在已經確定是最新請求
         // ====================================
 
-        if (
-            !response ||
-            !response.success
-        ) {
-
+        if (!response || !response.success) {
             console.log(
                 "❌ 找不到對應歌詞：",
                 songTitle,
@@ -566,22 +573,7 @@ async function loadLyricsForSong(
 
             console.log("📝 content.js 收到一般歌詞，不解析時間標籤");
 
-            const lines = response.text
-                .split(/\r?\n/)
-                .map(line => line.trim())
-                .filter(line => line !== "");
-
-            parsedLyrics = lines.map((text) => ({
-                time: null,
-                text: text
-            }));
-
-            console.log(
-                "📝 一般歌詞解析完成，共",
-                parsedLyrics.length,
-                "句"
-            );
-
+            parsedLyrics = parsePlainLyrics(response.text);
         } else {
 
             console.log("🧪 content.js 開始解析新歌 LRC");
@@ -598,7 +590,6 @@ async function loadLyricsForSong(
         // ========================================
         // 確認是否真的有歌詞
         // ========================================
-
         if (parsedLyrics.length === 0) {
             console.log(
                 "⚠️ 歌詞存在，但沒有解析出任何內容：",
@@ -610,7 +601,6 @@ async function loadLyricsForSong(
         // ========================================
         // 更新目前正在使用的歌詞
         // ========================================
-
         currentLyrics = parsedLyrics;
 
         console.log(
