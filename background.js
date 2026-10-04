@@ -2,6 +2,14 @@
 // YTM Lyrics - Background
 // ========================================
 
+// ========================================
+// 載入歌手別名資料庫
+// ========================================
+importScripts(
+    "artist-aliases.js",
+    "track-aliases.js"
+);
+
 // 目前完整歌詞
 let savedLyrics = [];
 
@@ -301,73 +309,108 @@ function detectLyricType(lrcText) {
         : "plain";
 }
 
-async function testSearchLRCLIB(trackName, artistName, albumName = null) {
-    const params = new URLSearchParams();
+// ========================================
+// 取得歌曲搜尋名稱
+// ========================================
+//
+// 第一個名稱永遠是 YouTube Music
+// 目前提供的歌曲名稱。
+//
+// 如果 track-aliases.js 有設定別名，
+// 再依序加入替代名稱。
+// ========================================
+function getTrackSearchNames(
+    trackName
+) {
+    const names = [];
 
-    params.set("track_name", trackName);
-    params.set("artist_name", artistName);
-
-    if (albumName) {
-        params.set("album_name", albumName);
+    // ====================================
+    // ① 先使用 YouTube Music 原始歌曲名稱
+    // ====================================
+    if (trackName) {
+        names.push(
+            trackName
+        );
     }
 
-    const url =
-        `https://lrclib.net/api/search?${params.toString()}`;
+    // ====================================
+    // ② 查詢歌曲別名
+    // ====================================
+    const aliases = trackAliases[trackName];
 
-    console.log("🔎 LRCLIB Search URL:", url);
+    // ====================================
+    // ③ 加入別名
+    // ====================================
+    if (Array.isArray(aliases)) {
 
-    try {
-        const response = await fetch(url, {
-            headers: {
-                "Lrclib-Client": "YTM-Lyrics/1.0"
+        for (const alias of aliases) {
+
+            // 避免加入空字串
+            // 或與原名稱完全相同的名稱
+            if (
+                alias &&
+                !names.includes(alias)
+            ) {
+
+                names.push(alias);
             }
-        });
-
-        if (!response.ok) {
-            console.error(
-                "❌ LRCLIB Search 失敗:",
-                response.status,
-                response.statusText
-            );
-            return null;
         }
-
-        const data = await response.json();
-
-        console.log("🔎 LRCLIB Search 結果:", data);
-        console.log(
-            `📚 找到 ${Array.isArray(data) ? data.length : 0} 筆結果`
-        );
-
-        if (Array.isArray(data)) {
-            data.forEach((item, index) => {
-                console.log(
-                    `🎵 候選 ${index + 1}:`,
-                    {
-                        id: item.id,
-                        trackName: item.trackName,
-                        artistName: item.artistName,
-                        albumName: item.albumName,
-                        duration: item.duration,
-                        hasSyncedLyrics:
-                            !!item.syncedLyrics,
-                        hasPlainLyrics:
-                            !!item.plainLyrics
-                    }
-                );
-            });
-        }
-
-        return data;
-
-    } catch (error) {
-        console.error(
-            "❌ LRCLIB Search 發生錯誤:",
-            error
-        );
-
-        return null;
     }
+
+    return names;
+}
+
+// ========================================
+// 取得歌手搜尋名稱
+// ========================================
+//
+// 第一個名稱永遠是 YouTube Music
+// 目前提供的歌手名稱。
+// 如果 artist-aliases.js 有設定別名，
+// 再依序加入替代名稱。
+// ========================================
+function getArtistSearchNames(
+    artistName
+) {
+
+    const names = [];
+
+    // ====================================
+    // ① 先使用 YouTube Music 原始名稱
+    // ====================================
+    if (artistName) {
+
+        names.push(
+            artistName
+        );
+    }
+
+    // ====================================
+    // ② 查詢歌手別名
+    // ====================================
+    const aliases =
+        artistAliases[artistName];
+
+    // ====================================
+    // ③ 加入別名
+    // ====================================
+    if (Array.isArray(aliases)) {
+
+        for (const alias of aliases) {
+
+            // 避免加入空字串
+            // 或與原名稱完全相同的名稱
+            if (
+                alias &&
+                !names.includes(alias)
+            ) {
+
+                names.push(alias);
+            }
+        }
+    }
+
+    return names;
 }
 
 // ========================================
@@ -696,7 +739,7 @@ function scoreLRCLIBCandidate(
     if (
         candidate.hasSyncedLyrics
     ) {
-        score += 20;
+        score += 100;
     } else if (
         candidate.hasPlainLyrics
     ) {
@@ -1359,6 +1402,80 @@ async function searchLyricsFile(
         "❌ 找不到對應的 LRC"
     );
 
+
+    return null;
+}
+
+async function searchLyricsFileWithAliases(
+    trackName
+) {
+
+    // ====================================
+    // 取得所有本機搜尋名稱
+    //
+    // 第一個：
+    // YouTube Music 原始歌曲名稱
+    //
+    // 後面：
+    // track-aliases.js 的歌曲別名
+    // ====================================
+    const trackSearchNames =
+        getTrackSearchNames(
+            trackName
+        );
+
+    console.log(
+        "📁 本機 LRC 搜尋名稱：",
+        trackSearchNames
+    );
+
+    // ====================================
+    // 依序搜尋
+    // ====================================
+    for (
+        const searchName of
+        trackSearchNames
+    ) {
+
+        console.log(
+            "🔍 嘗試本機 LRC：",
+            searchName
+        );
+
+        const result =
+            await searchLyricsFile(
+                searchName
+            );
+
+        // ====================================
+        // 找到
+        // ====================================
+        if (result) {
+
+            console.log(
+                "🎵 本機 LRC 搜尋成功：",
+                searchName,
+                "→",
+                result.fileName
+            );
+
+            return {
+                ...result,
+
+                // 記錄實際使用的搜尋名稱
+                matchedTrackName:
+                    searchName
+            };
+        }
+    }
+
+    // ====================================
+    // 全部找不到
+    // ====================================
+    console.log(
+        "❌ 所有本機歌曲名稱都找不到 LRC：",
+        trackSearchNames
+    );
 
     return null;
 }
@@ -2414,8 +2531,9 @@ chrome.runtime.onMessage.addListener(
                     // 第一階段：
                     // 搜尋本機 LRC
                     // ====================================
+
                     const localResult =
-                        await searchLyricsFile(
+                        await searchLyricsFileWithAliases(
                             songTitle
                         );
 
@@ -2491,13 +2609,255 @@ chrome.runtime.onMessage.addListener(
                         "🌐 找不到本機 LRC，開始搜尋 LRCLIB 多候選"
                     );
 
-                    const candidates =
-                        await searchLRCLIBCandidates(
-                            songTitle,
-                            artistName,
-                            albumName,
-                            duration
+                    // ====================================
+                    // 取得歌手搜尋名稱
+                    // ====================================
+                    const artistSearchNames =
+                        getArtistSearchNames(
+                            artistName
                         );
+
+                    console.log(
+                        "🎤 歌手搜尋名稱：",
+                        artistSearchNames
+                    );
+
+                    // ====================================
+                    // 取得歌曲搜尋名稱
+                    // ====================================
+                    const trackSearchNames =
+                        getTrackSearchNames(
+                            songTitle
+                        );
+
+                    console.log(
+                        "🎵 歌曲搜尋名稱：",
+                        trackSearchNames
+                    );
+
+                    // ====================================
+                    // 所有 LRCLIB 候選
+                    // ====================================
+                    //
+                    // 不再只保留最後一次搜尋結果。
+                    // 每一組搜尋找到的候選都會加入這裡，
+                    // 最後統一進行評分。
+                    // ====================================
+                    let candidates = [];
+
+                    // ====================================
+                    // 暫存「只有一般歌詞」的候選
+                    //
+                    // 如果最後完全找不到同步歌詞，
+                    // 就從這裡選出一般歌詞候選。
+                    // ====================================
+                    let fallbackCandidates = [];
+
+                    // ====================================
+                    // 記錄第一批一般歌詞候選
+                    // 所使用的搜尋名稱
+                    // ====================================
+                    let fallbackArtistName =
+                        artistName;
+
+                    let fallbackTrackName =
+                        songTitle;
+
+                    // ====================================
+                    // 是否找到任何同步歌詞
+                    // ====================================
+                    let hasAnySyncedLyrics = false;
+
+
+                    // ====================================
+                    // 歌名迴圈
+                    // ====================================
+                    for (
+                        const searchTrack of
+                        trackSearchNames
+                    ) {
+
+                        // ==================================
+                        // 歌手迴圈
+                        // ==================================
+                        for (
+                            const searchArtist of
+                            artistSearchNames
+                        ) {
+
+                            console.log(
+                                "🔎 嘗試 LRCLIB：",
+                                searchTrack,
+                                "×",
+                                searchArtist
+                            );
+
+                            // ==================================
+                            // 實際搜尋 LRCLIB
+                            // ==================================
+                            const searchCandidates =
+                                await searchLRCLIBCandidates(
+                                    searchTrack,
+                                    searchArtist,
+                                    albumName,
+                                    duration
+                                );
+
+                            // ==================================
+                            // 沒有候選
+                            // ==================================
+                            if (
+                                !Array.isArray(searchCandidates) ||
+                                searchCandidates.length === 0
+                            ) {
+
+                                console.log(
+                                    "⚠️ 沒有找到候選，準備嘗試下一個搜尋名稱：",
+                                    searchTrack,
+                                    "×",
+                                    searchArtist
+                                );
+
+                                continue;
+                            }
+
+
+                            // ==================================
+                            // 判斷目前搜尋結果是否有同步歌詞
+                            // ==================================
+                            const hasSyncedLyrics =
+                                searchCandidates.some(
+                                    candidate =>
+                                        candidate.syncedLyrics &&
+                                        candidate.syncedLyrics.trim()
+                                );
+
+
+                            // ==================================
+                            // 找到同步歌詞
+                            // ==================================
+                            if (hasSyncedLyrics) {
+
+                                hasAnySyncedLyrics = true;
+
+                                console.log(
+                                    "🎵 找到同步歌詞候選：",
+                                    searchTrack,
+                                    "×",
+                                    searchArtist,
+                                    "共",
+                                    searchCandidates.length,
+                                    "筆"
+                                );
+
+                            }
+
+                            // ==================================
+                            // 找到候選，但沒有同步歌詞
+                            // ==================================
+                            else {
+
+                                console.log(
+                                    "📄 找到候選，但沒有同步歌詞：",
+                                    searchTrack,
+                                    "×",
+                                    searchArtist,
+                                    "共",
+                                    searchCandidates.length,
+                                    "筆"
+                                );
+
+                                // ==================================
+                                // 只保留第一批一般歌詞候選
+                                // ==================================
+                                if (
+                                    fallbackCandidates.length === 0
+                                ) {
+
+                                    fallbackCandidates =
+                                        searchCandidates;
+
+                                    fallbackTrackName =
+                                        searchTrack;
+
+                                    fallbackArtistName =
+                                        searchArtist;
+                                }
+                            }
+
+
+                            // ==================================
+                            // 將這次搜尋找到的候選
+                            // 全部加入候選池
+                            // ==================================
+                            candidates.push(
+                                ...searchCandidates
+                            );
+
+                            console.log(
+                                "📚 目前累積 LRCLIB 候選：",
+                                candidates.length,
+                                "筆"
+                            );
+                        }
+                    }
+
+
+                    // ========================================
+                    // 所有搜尋完成
+                    // ========================================
+                    console.log(
+                        "🔎 LRCLIB 所有搜尋組合完成：",
+                        "共",
+                        candidates.length,
+                        "筆候選"
+                    );
+
+
+                    // ========================================
+                    // 如果有同步歌詞
+                    // ========================================
+                    //
+                    // 只保留有同步歌詞的候選。
+                    // 因為同步歌詞優先於一般歌詞。
+                    // ========================================
+                    if (hasAnySyncedLyrics) {
+
+                        candidates =
+                            candidates.filter(
+                                candidate =>
+                                    candidate.syncedLyrics &&
+                                    candidate.syncedLyrics.trim()
+                            );
+
+                        console.log(
+                            "🎵 已找到同步歌詞，保留同步候選：",
+                            candidates.length,
+                            "筆"
+                        );
+                    }
+
+
+                    // ========================================
+                    // 如果完全沒有同步歌詞
+                    // 就退回第一批一般歌詞候選
+                    // ========================================
+                    else if (
+                        fallbackCandidates.length > 0
+                    ) {
+
+                        candidates =
+                            fallbackCandidates;
+
+                        console.log(
+                            "↩️ 所有搜尋名稱都沒有同步歌詞，",
+                            "退回第一批一般歌詞候選：",
+                            fallbackTrackName,
+                            "×",
+                            fallbackArtistName
+                        );
+                    }
+
 
                     // ====================================
                     // LRCLIB 沒有任何候選
@@ -2709,6 +3069,12 @@ chrome.runtime.onMessage.addListener(
                             id:
                                 bestCandidate.id,
 
+                            originalTrackName:
+                                songTitle,
+
+                            originalArtistName:
+                                artistName,
+
                             trackName:
                                 bestCandidate.trackName,
 
@@ -2784,6 +3150,32 @@ chrome.runtime.onMessage.addListener(
             return true;
         }
 
+        if (message.type === "setLyricTimeOffset") {
+
+            const offset =
+                Number(message.offset);
+
+            if (!Number.isFinite(offset)) {
+                return;
+            }
+
+            if (
+                lastYtmTabId !== null &&
+                lastYtmTabId !== undefined
+            ) {
+
+                chrome.tabs.sendMessage(
+                    lastYtmTabId,
+                    {
+                        type: "setLyricTimeOffset",
+                        offset: offset
+                    }
+                ).catch(() => {});
+            }
+
+            return;
+        }
+
         // ==================================
         // 測試尋找 LRC
         // ==================================
@@ -2824,35 +3216,6 @@ chrome.runtime.onMessage.addListener(
             });
 
             // 非同步回應一定要 return true
-            return true;
-        }
-
-        if (message.type === "testLRCLIBSearch") {
-            (async () => {
-                try {
-                    const results = await testSearchLRCLIB(
-                        message.trackName,
-                        message.artistName,
-                        message.albumName || null
-                    );
-
-                    sendResponse({
-                        success: Array.isArray(results),
-                        results: results || []
-                    });
-                } catch (error) {
-                    console.error(
-                        "❌ LRCLIB Search 測試失敗：",
-                        error
-                    );
-
-                    sendResponse({
-                        success: false,
-                        results: []
-                    });
-                }
-            })();
-
             return true;
         }
     }

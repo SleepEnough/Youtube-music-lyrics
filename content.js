@@ -57,6 +57,8 @@ let lyricsLoadId = 0;
 let pagePlayerCurrentTime = null;
 let pagePlayerState = null;
 
+let lyricTimeOffset = 0;
+
 window.addEventListener("message", (event) => {
     if (event.source !== window) return;
 
@@ -737,6 +739,13 @@ async function checkSongAndLyric() {
         loadedSongTitle = "";
 
         // ====================================
+        // 重置歌詞同步偏移
+        // ====================================
+        lyricTimeOffset = 0;
+        
+        console.log("🎚️ 歌曲變更，歌詞同步偏移已重置：0.0 秒");
+
+        // ====================================
         // 清除上一首歌曲的 LRCLIB 候選
         // ====================================
         lyricCandidates = [];
@@ -770,7 +779,10 @@ async function checkSongAndLyric() {
         // ====================================
         // 找目前歌詞
         // ====================================
-        const currentLyric = findCurrentLyric(song.currentTime, currentLyrics);
+        const lyricCurrentTime =
+            song.currentTime + lyricTimeOffset;
+
+        const currentLyric = findCurrentLyric(lyricCurrentTime, currentLyrics);
 
         // ====================================
         // 如果找到歌詞
@@ -1055,10 +1067,12 @@ function selectLyricCandidate(candidateId) {
             song.currentTime
         )
     ) {
+        const lyricCurrentTime =
+            song.currentTime + lyricTimeOffset;
 
         const newCurrentLyric =
             findCurrentLyric(
-                song.currentTime,
+                lyricCurrentTime,
                 currentLyrics
             );
 
@@ -1091,10 +1105,7 @@ chrome.runtime.onMessage.addListener(
         // ====================================
         // 使用者選擇新的 LRCLIB 歌詞
         // ====================================
-        if (
-            message.type ===
-            "selectLyricCandidate"
-        ) {
+        if (message.type === "selectLyricCandidate") {
 
             console.log(
                 "📨 content.js 收到候選切換要求：",
@@ -1104,6 +1115,25 @@ chrome.runtime.onMessage.addListener(
             selectLyricCandidate(
                 message.candidateId
             );
+        }
+
+        if (message.type === "setLyricTimeOffset") {
+            const offset =
+                Number(message.offset);
+
+            if (!Number.isFinite(offset)) {
+                return;
+            }
+
+            lyricTimeOffset = offset;
+
+            console.log(
+                "🎚️ 歌詞同步偏移：",
+                lyricTimeOffset.toFixed(1),
+                "秒"
+            );
+
+            return;
         }
     }
 );

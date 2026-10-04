@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
 
     <title>
-    YTM Lyrics
+        YTM Lyrics
     </title>
 
     <style>
@@ -15,38 +15,30 @@
     /* ========================================
     整個視窗
     ======================================== */
-
+    html,
     body {
         margin: 0;
         padding: 15px;
+
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+
         font-family:
             "Microsoft JhengHei",
             sans-serif;
-          background:
-        rgba(0, 0, 0, var(--background-opacity));
+
+        background:
+            rgba(0, 0, 0, var(--background-opacity));
+
         color: white;
+
         --background-opacity: 1;
-    }
 
-    /* ========================================
-    歌詞
-    ======================================== */
+        overflow: hidden;
 
-    #lyrics {
-        margin-top: 15px;
-        height: calc(100vh - 70px);
-        overflow-y: auto;
-        background: transparent;
-    }
-
-    /* 每一句歌詞 */
-    #lyrics div {
-        padding: 8px;
-        margin: 4px 0;
-
-        transition:
-            color 0.2s,
-            font-size 0.2s;
+        display: flex;
+        flex-direction: column;
     }
 
     /* ========================================
@@ -59,7 +51,8 @@
 
         margin: -15px -15px 15px -15px;
 
-        background: rgba(21, 21, 21, var(--background-opacity));
+        background:
+            rgba(21, 21, 21, var(--background-opacity));
 
         cursor: move;
 
@@ -69,92 +62,417 @@
     }
 
     /* ========================================
-   LRCLIB 候選歌詞選單
-   ======================================== */
-    #lyricCandidateSelect {
+    同步控制區
+    ======================================== */
+    #syncControls {
 
-        display: none;
+        display: flex;
 
-        margin-left: 10px;
+        align-items: center;
 
-        max-width: 260px;
+        justify-content: center;
 
-        padding: 3px 6px;
+        gap: 6px;
 
-        border-radius: 4px;
+        padding: 6px 0;
 
-        border: 1px solid rgba(
-            255,
-            255,
-            255,
-            0.25
-        );
+        margin-bottom: 4px;
 
-        background: rgba(
-            0,
-            0,
-            0,
-            0.45
-        );
+        user-select: none;
 
-        color: white;
+        opacity: 0.65;
+
+        transition:
+            opacity 0.2s ease;
+    }
+
+    #syncControls:hover {
+        opacity: 1;
+    }
+
+    /* ========================================
+    同步控制按鈕
+    ======================================== */
+    #syncControls button {
+
+        padding: 5px 9px;
+
+        border:
+            1px solid rgba(
+                255,
+                255,
+                255,
+                0.12
+            );
+
+        border-radius: 6px;
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.05
+            );
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.65
+            );
+
+        font-family: inherit;
 
         font-size: 12px;
 
         cursor: pointer;
+
+        transition:
+            background 0.15s ease,
+            color 0.15s ease,
+            border-color 0.15s ease,
+            transform 0.1s ease;
+    }
+
+    #syncControls button:hover {
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.11
+            );
+
+        color: white;
+
+        border-color:
+            rgba(
+                255,
+                255,
+                255,
+                0.22
+            );
+    }
+
+    #syncControls button:active {
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.16
+            );
+
+        transform: scale(0.96);
+    }
+
+    /* ========================================
+    同步偏移文字
+    ======================================== */
+    #syncOffset {
+
+        min-width: 82px;
+
+        text-align: center;
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.40
+            );
+
+        font-size: 12px;
+
+        letter-spacing: 0.2px;
+    }
+
+    /* ========================================
+    LRCLIB 候選歌詞選單
+    ======================================== */
+    #lyricCandidateSelect {
+
+        display: none;
+
+        margin: 2px auto 6px auto;
+
+        max-width: 280px;
+
+        padding: 5px 9px;
+
+        border:
+            1px solid rgba(
+                255,
+                255,
+                255,
+                0.12
+            );
+
+        border-radius: 6px;
+
+        outline: none;
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.05
+            );
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.75
+            );
+
+        font-family: inherit;
+
+        font-size: 12px;
+
+        cursor: pointer;
+
+        transition:
+            background 0.15s ease,
+            border-color 0.15s ease;
+    }
+
+    #lyricCandidateSelect:hover {
+
+        background:
+            rgba(
+                255,
+                255,
+                255,
+                0.10
+            );
+
+        border-color:
+            rgba(
+                255,
+                255,
+                255,
+                0.20
+            );
     }
 
     /* ========================================
     下拉選單中的選項
     ======================================== */
-
     #lyricCandidateSelect option {
 
-        background: #222;
+        background: #181818;
 
         color: white;
     }
+
+    /* ========================================
+    歌詞區域
+    ======================================== */
+    #lyrics {
+
+        flex: 1;
+
+        min-height: 0;
+
+        margin-top: 4px;
+
+        padding:
+            40px 12px 120px 12px;
+
+        overflow-y: auto;
+
+        overflow-x: hidden;
+
+        background: transparent;
+
+        scroll-behavior: smooth;
+
+        /*
+        Firefox 隱藏捲軸
+        */
+        scrollbar-width: none;
+    }
+
+    /*
+    Chrome / Edge / Safari 隱藏捲軸
+    */
+    #lyrics::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* ========================================
+    一般歌詞
+    ======================================== */
+    #lyrics div {
+
+        padding: 8px 12px;
+
+        margin: 8px 0;
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.30
+            );
+
+        font-size: 18px;
+
+        font-weight: 400;
+
+        line-height: 1.6;
+
+        text-align: center;
+
+        letter-spacing: 0.2px;
+
+        opacity: 0.75;
+
+        transform: scale(1);
+
+        transition:
+            color 0.35s ease,
+            opacity 0.35s ease,
+            transform 0.35s ease;
+    }
+
+    /* ========================================
+    滑鼠移過歌詞
+    ======================================== */
+    #lyrics div:hover {
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.60
+            );
+
+        cursor: pointer;
+    }
+
+    /* ========================================
+    目前播放中的歌詞
+    ======================================== */
+    #lyrics div.current {
+
+        color: white;
+
+        opacity: 1;
+
+        transform: scale(1.04);
+
+        text-shadow:
+            0 0 18px
+            rgba(
+                255,
+                255,
+                255,
+                0.12
+            );
+    }
+
+    /* ========================================
+    等待歌曲
+    ======================================== */
+    #lyrics:empty::before {
+
+        content: "等待歌曲...";
+
+        display: block;
+
+        margin-top: 100px;
+
+        text-align: center;
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.30
+            );
+
+        font-size: 16px;
+    }
+
     </style>
+
 </head>
 
 <body>
 
-<!-- ========================================
-浮動視窗控制列
-======================================== -->
-<!-- <div id="titleBar">
+    <!-- ========================================
+    浮動視窗控制列
+    ======================================== -->
 
-    <span id="windowTitle">
-        YTM Lyrics
-    </span>
+    <!-- <div id="titleBar">
 
-</div> -->
-    
-<div>
-    <!-- 
-    ========================================
+        <span id="windowTitle">
+            YTM Lyrics
+        </span>
+
+    </div> -->
+
+    <!-- ========================================
+    同步控制
+    ======================================== -->
+
+    <div id="syncControls">
+        <button
+            id="syncMinus1"
+            type="button"
+        >
+            -1.0s
+        </button>
+
+        <button id="syncMinus01" type="button">
+            -0.1s
+        </button>
+
+        <span id="syncOffset">
+            偏移：0.0s
+        </span>
+
+        <button id="syncPlus01" type="button">
+            +0.1s
+        </button>
+
+        <button id="syncPlus1" type="button">
+            +1.0s
+        </button>
+
+    </div>
+
+    <!-- ========================================
     LRCLIB 候選歌詞選單
-    ========================================
-    預設隱藏。
-    只有目前歌曲存在多個 LRCLIB 候選時，
-    lyrics.js 才會顯示這個選單。-->
-    <select
-        id="lyricCandidateSelect"
-        title="選擇其他 LRCLIB 歌詞"
-    >
-    </select>
-</div>
-    
-<!-- ========================================
-歌詞
-======================================== -->
-<div id="lyrics"> 
-    等待歌曲...
-</div>
+    ======================================== -->
 
+    <div>
+        <select
+            id="lyricCandidateSelect"
+            title="選擇其他 LRCLIB 歌詞"
+        >
+        </select>
+    </div>
 
-<script src="lyrics.js"></script>
+    <!-- ========================================
+    歌詞
+    ======================================== -->
+    <div id="lyrics">
+        等待歌曲...
+    </div>
 
+    <script src="lyrics.js"></script>
 </body>
-
 </html>

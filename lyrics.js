@@ -53,11 +53,12 @@ let lyricFontWeight = 400;
 let lyricTextAlign = "center";
 let backgroundOpacity = 100;
 
+let lyricTimeOffset = 0;
+
 // ========================================
 // 接收 Background 傳來的訊息
 // ========================================
 chrome.runtime.onMessage.addListener((message) => {
-    // console.log("📨 歌詞視窗收到訊息：", message.type);
     // ====================================
     // 收到整份歌詞
     // ====================================
@@ -913,6 +914,75 @@ if (lyricCandidateSelect) {
         }
     );
 }
+
+const syncMinus1 =
+    document.getElementById("syncMinus1");
+
+const syncMinus01 =
+    document.getElementById("syncMinus01");
+
+const syncPlus01 =
+    document.getElementById("syncPlus01");
+
+const syncPlus1 =
+    document.getElementById("syncPlus1");
+
+const syncOffset =
+    document.getElementById("syncOffset");
+
+
+function updateSyncOffsetDisplay() {
+
+    syncOffset.textContent =
+        `偏移：${lyricTimeOffset.toFixed(1)}s`;
+
+}
+
+
+function changeSyncOffset(delta) {
+
+    lyricTimeOffset += delta;
+
+    lyricTimeOffset =
+        Math.round(
+            lyricTimeOffset * 10
+        ) / 10;
+
+    updateSyncOffsetDisplay();
+
+    chrome.runtime.sendMessage({
+
+        type: "setLyricTimeOffset",
+
+        offset: lyricTimeOffset
+
+    });
+
+}
+
+
+syncMinus1.addEventListener(
+    "click",
+    () => changeSyncOffset(-1.0)
+);
+
+syncMinus01.addEventListener(
+    "click",
+    () => changeSyncOffset(-0.1)
+);
+
+syncPlus01.addEventListener(
+    "click",
+    () => changeSyncOffset(0.1)
+);
+
+syncPlus1.addEventListener(
+    "click",
+    () => changeSyncOffset(1.0)
+);
+
+
+updateSyncOffsetDisplay();
 
 (async () => {
     await loadLyricColor();
