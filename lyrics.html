@@ -52,7 +52,12 @@
         margin: -15px -15px 15px -15px;
 
         background:
-            rgba(21, 21, 21, var(--background-opacity));
+            rgba(
+                21,
+                21,
+                21,
+                var(--background-opacity)
+            );
 
         cursor: move;
 
@@ -80,10 +85,10 @@
 
         user-select: none;
 
-        opacity: 0.65;
+        opacity: 0.55;
 
         transition:
-            opacity 0.2s ease;
+            opacity 0.25s ease;
     }
 
     #syncControls:hover {
@@ -98,11 +103,12 @@
         padding: 5px 9px;
 
         border:
-            1px solid rgba(
+            1px solid
+            rgba(
                 255,
                 255,
                 255,
-                0.12
+                0.10
             );
 
         border-radius: 6px;
@@ -112,7 +118,7 @@
                 255,
                 255,
                 255,
-                0.05
+                0.04
             );
 
         color:
@@ -120,7 +126,7 @@
                 255,
                 255,
                 255,
-                0.65
+                0.60
             );
 
         font-family: inherit;
@@ -143,7 +149,7 @@
                 255,
                 255,
                 255,
-                0.11
+                0.10
             );
 
         color: white;
@@ -153,7 +159,7 @@
                 255,
                 255,
                 255,
-                0.22
+                0.20
             );
     }
 
@@ -184,7 +190,7 @@
                 255,
                 255,
                 255,
-                0.40
+                0.38
             );
 
         font-size: 12px;
@@ -206,11 +212,12 @@
         padding: 5px 9px;
 
         border:
-            1px solid rgba(
+            1px solid
+            rgba(
                 255,
                 255,
                 255,
-                0.12
+                0.10
             );
 
         border-radius: 6px;
@@ -222,7 +229,7 @@
                 255,
                 255,
                 255,
-                0.05
+                0.04
             );
 
         color:
@@ -230,7 +237,7 @@
                 255,
                 255,
                 255,
-                0.75
+                0.70
             );
 
         font-family: inherit;
@@ -251,7 +258,7 @@
                 255,
                 255,
                 255,
-                0.10
+                0.09
             );
 
         border-color:
@@ -259,7 +266,7 @@
                 255,
                 255,
                 255,
-                0.20
+                0.18
             );
     }
 
@@ -278,6 +285,8 @@
     ======================================== */
     #lyrics {
 
+        position: relative;
+
         flex: 1;
 
         min-height: 0;
@@ -285,7 +294,7 @@
         margin-top: 4px;
 
         padding:
-            40px 12px 120px 12px;
+            90px 12px 160px 12px;
 
         overflow-y: auto;
 
@@ -296,16 +305,74 @@
         scroll-behavior: smooth;
 
         /*
-        Firefox 隱藏捲軸
+        Firefox
         */
         scrollbar-width: none;
     }
 
     /*
-    Chrome / Edge / Safari 隱藏捲軸
+    Chrome / Edge / Safari
     */
     #lyrics::-webkit-scrollbar {
         display: none;
+    }
+
+    /* ========================================
+    歌詞上方漸層遮罩
+    ======================================== */
+    #lyrics::before {
+
+        content: "";
+
+        position: fixed;
+
+        top: 0;
+
+        left: 0;
+
+        right: 0;
+
+        height: 90px;
+
+        pointer-events: none;
+
+        background:
+            linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.65),
+                rgba(0, 0, 0, 0)
+            );
+
+        z-index: 5;
+    }
+
+    /* ========================================
+    歌詞下方漸層遮罩
+    ======================================== */
+    #lyrics::after {
+
+        content: "";
+
+        position: fixed;
+
+        bottom: 0;
+
+        left: 0;
+
+        right: 0;
+
+        height: 120px;
+
+        pointer-events: none;
+
+        background:
+            linear-gradient(
+                to top,
+                rgba(0, 0, 0, 0.70),
+                rgba(0, 0, 0, 0)
+            );
+
+        z-index: 5;
     }
 
     /* ========================================
@@ -313,16 +380,18 @@
     ======================================== */
     #lyrics div {
 
-        padding: 8px 12px;
+        padding:
+            9px 14px;
 
-        margin: 8px 0;
+        margin:
+            12px 0;
 
         color:
             rgba(
                 255,
                 255,
                 255,
-                0.30
+                0.28
             );
 
         font-size: 18px;
@@ -333,32 +402,22 @@
 
         text-align: center;
 
-        letter-spacing: 0.2px;
+        letter-spacing: 0.25px;
 
-        opacity: 0.75;
+        opacity: 0.68;
 
-        transform: scale(1);
+        transform:
+            scale(1)
+            translateY(0);
+
+        filter:
+            blur(0);
 
         transition:
-            color 0.35s ease,
-            opacity 0.35s ease,
-            transform 0.35s ease;
-    }
-
-    /* ========================================
-    滑鼠移過歌詞
-    ======================================== */
-    #lyrics div:hover {
-
-        color:
-            rgba(
-                255,
-                255,
-                255,
-                0.60
-            );
-
-        cursor: pointer;
+            color 0.40s ease,
+            opacity 0.40s ease,
+            transform 0.40s ease,
+            filter 0.40s ease;
     }
 
     /* ========================================
@@ -370,16 +429,114 @@
 
         opacity: 1;
 
-        transform: scale(1.04);
+        transform:
+            scale(1.045)
+            translateY(-1px);
+
+        filter:
+            blur(0);
 
         text-shadow:
-            0 0 18px
+            0 0 20px
             rgba(
                 255,
                 255,
                 255,
-                0.12
+                0.14
             );
+    }
+
+    /* ========================================
+    目前歌詞附近的視覺層級
+    ======================================== */
+
+    /*
+    前後第一句
+    */
+    #lyrics div.lyric-near {
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.32
+            );
+
+        opacity: 0.65;
+
+        transform:
+            scale(1.01);
+
+        filter:
+            blur(0);
+    }
+
+
+    /*
+    前後第二句
+    */
+    #lyrics div.lyric-near-2 {
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.18
+            );
+
+        opacity: 0.65;
+
+        transform:
+            scale(1);
+
+        filter:
+            blur(0);
+    }
+
+
+    /*
+    距離目前歌詞三句以上
+    */
+    #lyrics div.lyric-far {
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.10
+            );
+
+        opacity: 0.45;
+
+        transform:
+            scale(0.98);
+
+        filter:
+            blur(0.15px);
+    }
+
+    /* ========================================
+    歌詞滑鼠移入
+    ======================================== */
+    #lyrics div:hover:not(.current) {
+
+        color:
+            rgba(
+                255,
+                255,
+                255,
+                0.58
+            ) !important;
+
+        opacity: 0.90 !important;
+
+        transform:
+            scale(1.02);
+
+        cursor: pointer;
     }
 
     /* ========================================
@@ -407,6 +564,7 @@
     }
 
     </style>
+
 
 </head>
 

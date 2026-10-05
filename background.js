@@ -464,8 +464,12 @@ async function searchLRCLIBCandidates(
     try {
         // ====================================
         // 呼叫 LRCLIB
+        //
+        // 使用共用重試機制。
+        // 遇到 429 / 500 / 502 / 503 / 504
+        // 時會自動重新搜尋。
         // ====================================
-        const response = await fetch(
+        const response = await searchLRCLIBWithRetry(
             url,
             {
                 headers: {
@@ -478,10 +482,12 @@ async function searchLRCLIBCandidates(
         // ====================================
         // API 錯誤
         // ====================================
-        if (!response.ok) {
+        if (!response || !response.ok) {
             console.error(
                 "❌ LRCLIB Search API 錯誤：",
-                response.status
+                response
+                    ? response.status
+                    : "無回應"
             );
 
             return [];
@@ -1576,6 +1582,146 @@ async function findLyricsFile(fileName)
 const LRCLIB_API_URL = "https://lrclib.net/api/get";
 
 // ========================================
+// LRCLIB 重試等待
+// ========================================
+function wait(ms) {
+
+    return new Promise(
+        resolve => setTimeout(
+            resolve,
+            ms
+        )
+    );
+
+}
+
+// ========================================
+// LRCLIB Search API 重試
+// ========================================
+async function searchLRCLIBWithRetry(
+    url,
+    options = {},
+    maxRetries = 3
+) {
+
+    const retryableStatusCodes = [
+        429,
+        500,
+        502,
+        503,
+        504
+    ];
+
+    for (
+        let attempt = 1;
+        attempt <= maxRetries;
+        attempt++
+    ) {
+
+        try {
+
+            const response =
+                await fetch(
+                    url,
+                    options
+                );
+
+            // ====================================
+            // 成功
+            // ====================================
+            if (response.ok) {
+
+                return response;
+            }
+
+            // ====================================
+            // 可以重試的錯誤
+            // ====================================
+            if (
+                retryableStatusCodes.includes(
+                    response.status
+                )
+            ) {
+
+                console.log(
+                    `⚠️ LRCLIB API 暫時錯誤：${response.status}`
+                    + `（第 ${attempt}/${maxRetries} 次）`
+                );
+
+                // 還有重試機會
+                if (
+                    attempt < maxRetries
+                ) {
+
+                    const delay =
+                        attempt * 1000;
+
+                    console.log(
+                        `⏳ ${delay}ms 後重新搜尋 LRCLIB`
+                    );
+
+                    await new Promise(
+                        resolve =>
+                            setTimeout(
+                                resolve,
+                                delay
+                            )
+                    );
+
+                    continue;
+                }
+            }
+
+            // ====================================
+            // 不需要重試
+            // ====================================
+            return response;
+
+        } catch (error) {
+
+            console.warn(
+                `⚠️ LRCLIB 網路錯誤`
+                + `（第 ${attempt}/${maxRetries} 次）：`,
+                error
+            );
+
+            // ====================================
+            // 還有重試機會
+            // ====================================
+            if (
+                attempt < maxRetries
+            ) {
+
+                const delay =
+                    attempt * 1000;
+
+                console.log(
+                    `⏳ ${delay}ms 後重新搜尋 LRCLIB`
+                );
+
+                await new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            delay
+                        )
+                );
+
+                continue;
+            }
+
+            console.error(
+                "❌ LRCLIB 重試全部失敗"
+            );
+
+            throw error;
+        }
+    }
+
+    return null;
+}
+
+// ========================================
 // 從 LRCLIB 搜尋歌詞
 // ========================================
 async function searchLyricsFromLRCLIB(trackName, artistName, albumName = null, duration = null) {
@@ -1608,7 +1754,7 @@ async function searchLyricsFromLRCLIB(trackName, artistName, albumName = null, d
     console.log("🌐 LRCLIB URL：", url);
 
     try {
-        let response = await fetch(url, {
+        let response = await searchLRCLIBWithRetry(url, {
             headers: {
                 "Lrclib-Client": "YTM-Lyrics/1.0"
             }
@@ -1623,14 +1769,14 @@ async function searchLyricsFromLRCLIB(trackName, artistName, albumName = null, d
 
             console.log("🌐 LRCLIB fallback URL：", url);
 
-            response = await fetch(url, {
+            response = await searchLRCLIBWithRetry(url, {
                 headers: {
                     "Lrclib-Client": "YTM-Lyrics/1.0"
                 }
             });
         }
 
-        if (response.status === 404) {
+        if (!response || response.status === 404) {
             console.log("❌ LRCLIB 找不到歌詞");
             return null;
         }
@@ -2366,6 +2512,19 @@ chrome.runtime.onMessage.addListener(
 
                 selectedCandidate: null
             });
+
+            // ========================================
+            // 重設歌詞同步偏移
+            // ========================================
+            sendMessageToLyricsWindow({
+                type:
+                    "setLyricTimeOffset",
+
+                offset:
+                    0
+            });
+
+            console.log("🎚️ 已通知歌詞視窗重設同步偏移：0.0 秒");
 
             return;
         }
