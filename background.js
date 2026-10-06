@@ -59,6 +59,114 @@ let lyricsWindowId = null;
 let lyricsWindowCreating = false;
 
 // ========================================
+// 儲存 Background 重要狀態
+// ========================================
+async function saveRuntimeState() {
+
+    try {
+
+        await chrome.storage.local.set({
+
+            lyricsWindowId:
+                lyricsWindowId,
+
+            lastYtmTabId:
+                lastYtmTabId,
+
+            lastLyricLoadId:
+                lastLyricLoadId
+
+        });
+
+        console.log(
+            "💾 Background 狀態已儲存：",
+            {
+                lyricsWindowId,
+                lastYtmTabId,
+                lastLyricLoadId
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "❌ 儲存 Background 狀態失敗：",
+            error
+        );
+    }
+}
+
+// ========================================
+// 讀取 Background 重要狀態
+// ========================================
+async function loadRuntimeState() {
+
+    try {
+
+        const result =
+            await chrome.storage.local.get([
+                "lyricsWindowId",
+                "lastYtmTabId",
+                "lastLyricLoadId"
+            ]);
+
+        // ====================================
+        // 還原歌詞視窗 ID
+        // ====================================
+        if (
+            Number.isInteger(
+                result.lyricsWindowId
+            )
+        ) {
+
+            lyricsWindowId =
+                result.lyricsWindowId;
+        }
+
+        // ====================================
+        // 還原 YTM Tab ID
+        // ====================================
+        if (
+            Number.isInteger(
+                result.lastYtmTabId
+            )
+        ) {
+
+            lastYtmTabId =
+                result.lastYtmTabId;
+        }
+
+        // ====================================
+        // 還原 Load ID
+        // ====================================
+        if (
+            result.lastLyricLoadId !==
+            undefined
+        ) {
+
+            lastLyricLoadId =
+                result.lastLyricLoadId;
+        }
+
+        console.log(
+            "♻️ Background 狀態已還原：",
+            {
+                lyricsWindowId,
+                lastYtmTabId,
+                lastLyricLoadId
+            }
+        );
+
+    } catch (error) {
+
+        console.error(
+            "❌ 讀取 Background 狀態失敗：",
+            error
+        );
+    }
+}
+
+// ========================================
 // 工具列按鈕：開啟 / 叫回歌詞視窗
 // ========================================
 async function openOrFocusLyricsWindow() {
@@ -272,6 +380,8 @@ async function openOrFocusLyricsWindow() {
             "🆕 歌詞視窗已建立，ID：",
             lyricsWindowId
         );
+
+        await saveRuntimeState();
 
     } catch (error) {
 
@@ -863,7 +973,7 @@ async function findExistingLyricsWindow() {
 
                 if (
                     tab.url &&
-                    tab.url === lyricsUrl
+                    tab.url.startsWith(lyricsUrl)
                 ) {
 
                     console.log(
@@ -873,6 +983,8 @@ async function findExistingLyricsWindow() {
 
                     lyricsWindowId =
                         window.id;
+
+                    await saveRuntimeState();
 
                     return window;
                 }
@@ -899,12 +1011,42 @@ async function findExistingLyricsWindow() {
 // ========================================
 // 取得歌詞視窗的 Tab
 // ========================================
+//
+// Service Worker 重新啟動後，
+// lyricsWindowId 可能會變成 null。
+// 因此不能只依賴記憶中的 window ID，
+// 必須在找不到時重新掃描 Chrome。
+// ========================================
 async function getLyricsWindowTab() {
 
+    // ====================================
+    // ① 如果目前沒有歌詞視窗 ID
+    // 先嘗試重新尋找實際存在的歌詞視窗
+    // ====================================
     if (lyricsWindowId === null) {
-        return null;
+
+        console.log(
+            "🔎 lyricsWindowId 不存在，重新尋找歌詞視窗"
+        );
+
+        const existingWindow =
+            await findExistingLyricsWindow();
+
+        if (!existingWindow) {
+
+            console.log(
+                "❌ Chrome 中找不到歌詞視窗"
+            );
+
+            return null;
+        }
     }
+
     try {
+
+        // ====================================
+        // ② 使用目前的 window ID 取得視窗
+        // ====================================
         const window =
             await chrome.windows.get(
                 lyricsWindowId,
@@ -913,26 +1055,115 @@ async function getLyricsWindowTab() {
                 }
             );
 
+        // ====================================
+        // 確認有 Tab
+        // ====================================
         if (
             !window.tabs ||
             window.tabs.length === 0
         ) {
+
+            console.log(
+                "⚠️ 歌詞視窗存在，但是沒有找到 Tab"
+            );
+
             return null;
         }
 
-        return window.tabs[0];
+        // ====================================
+        // 找真正的 lyrics.html Tab
+        // ====================================
+        const lyricsUrl =
+            chrome.runtime.getURL(
+                "lyrics.html"
+            );
+
+        const lyricsTab =
+            window.tabs.find(
+                tab =>
+                    tab.url === lyricsUrl
+            );
+
+        // ====================================
+        // 找到歌詞 Tab
+        // ====================================
+        if (lyricsTab) {
+
+            return lyricsTab;
+        }
+
+        console.log(
+            "⚠️ 找到歌詞視窗，但其中沒有 lyrics.html Tab"
+        );
+
+        return null;
 
     } catch (error) {
 
         console.log(
-            "⚠️ 無法取得歌詞視窗 Tab：",
+            "⚠️ 目前歌詞視窗 ID 已失效，嘗試重新尋找：",
             error
         );
 
-        return null;
+        // ====================================
+        // ③ window ID 可能已經失效
+        // 例如：
+        // - Service Worker 重啟
+        // - 視窗被關閉後重新建立
+        // ====================================
+        lyricsWindowId = null;
+
+        const existingWindow =
+            await findExistingLyricsWindow();
+
+        if (!existingWindow) {
+
+            console.log(
+                "❌ 重新尋找後仍找不到歌詞視窗"
+            );
+
+            return null;
+        }
+
+        // ====================================
+        // 重新取得 Tab
+        // ====================================
+        if (
+            !existingWindow.tabs ||
+            existingWindow.tabs.length === 0
+        ) {
+
+            return null;
+        }
+
+        const lyricsUrl =
+            chrome.runtime.getURL(
+                "lyrics.html"
+            );
+
+        const lyricsTab =
+            existingWindow.tabs.find(
+                tab =>
+                    tab.url === lyricsUrl
+            );
+
+        if (!lyricsTab) {
+
+            console.log(
+                "❌ 重新找到視窗，但找不到 lyrics.html Tab"
+            );
+
+            return null;
+        }
+
+        console.log(
+            "♻️ 已成功重新取得歌詞視窗 Tab：",
+            lyricsTab.id
+        );
+
+        return lyricsTab;
     }
 }
-
 // ========================================
 // 安全傳送訊息給歌詞視窗
 // ========================================
@@ -2192,6 +2423,8 @@ chrome.runtime.onMessage.addListener(
                         lyricsWindowId
                     );
 
+                    await saveRuntimeState();
+
                     console.log(
                         "📍 目前位置：",
                         newWindow.left,
@@ -2662,6 +2895,8 @@ chrome.runtime.onMessage.addListener(
                             "📌 記錄 YTM 分頁 ID：",
                             lastYtmTabId
                         );
+
+                        await saveRuntimeState();
                     }
 
                     // ========================================
@@ -2674,6 +2909,8 @@ chrome.runtime.onMessage.addListener(
                         "📌 記錄目前歌詞 Load ID：",
                         lastLyricLoadId
                     );
+
+                    await saveRuntimeState();
 
                     console.log(
                         "🔍 開始搜尋歌詞：",
@@ -3423,8 +3660,11 @@ chrome.windows.onBoundsChanged.addListener(
 // 偵測歌詞視窗被關閉
 // ========================================
 chrome.windows.onRemoved.addListener(
-    (windowId) => {
+    async (windowId) => {
+
+        // ====================================
         // 不是目前歌詞視窗
+        // ====================================
         if (
             windowId !==
             lyricsWindowId
@@ -3437,17 +3677,38 @@ chrome.windows.onRemoved.addListener(
             windowId
         );
 
-
-        // 清除歌詞視窗 ID
+        // ====================================
+        // 清除記憶體中的 ID
+        // ====================================
         lyricsWindowId =
             null;
-
 
         console.log(
             "🧹 lyricsWindowId 已清除"
         );
 
+        // ====================================
+        // 清除 Storage 中的 ID
+        // ====================================
+        await chrome.storage.local.remove(
+            "lyricsWindowId"
+        );
+
+        console.log(
+            "🧹 Storage 中的 lyricsWindowId 已清除"
+        );
+
     }
 );
 
-console.log("🚀 YTM Lyrics Background 啟動！");
+// ========================================
+// Background 啟動
+// ========================================
+(async () => {
+
+    await loadRuntimeState();
+
+    console.log(
+        "🚀 YTM Lyrics Background 啟動！"
+    );
+})();

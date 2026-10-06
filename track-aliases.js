@@ -12,4 +12,24 @@ const trackAliases = {
     "DJ Got Us Fallin' In Love (合作演出：嘻哈鬥牛梗)": [
         "DJ Got Us Fallin' In Love"
     ],
+
+    "スキスキDieスキ超Ayeシテル - Suki-Suki Diesuki Cho AyeShiteru":[
+        "スキスキDieスキ超Ayeシテル"
+    ],
+
+    "前前前世 (original ver.)":[
+        "前前前世"
+    ],
+
+    "":[
+        ""
+    ],
+    
+    "":[
+        ""
+    ],
+    
+    "":[
+        ""
+    ],
 }

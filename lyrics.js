@@ -83,6 +83,11 @@ chrome.runtime.onMessage.addListener((message) => {
 
             currentLyric = null;
 
+            // ====================================
+            // 換歌時恢復自動同步
+            // ====================================
+            userScrolling = false;
+
             if (manualScrollReturnTimer) {
                 clearTimeout(
                     manualScrollReturnTimer
@@ -103,6 +108,12 @@ chrome.runtime.onMessage.addListener((message) => {
         // 建立新歌歌詞
         // ====================================
         currentLyric = null;
+
+        // ====================================
+        // 新歌曲載入時恢復自動同步
+        // ====================================
+        userScrolling = false;
+
         await showLyrics(message.lyrics);
 
         // ====================================
