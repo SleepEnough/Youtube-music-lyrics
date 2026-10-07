@@ -21,14 +21,24 @@ const trackAliases = {
         "前前前世"
     ],
 
-    "":[
-        ""
+    "Yellow (Re:Dialed) (合作演出：初音未來)":[
+        "Yellow (Re:Dialed)"
     ],
     
-    "":[
-        ""
+    "絆ノ奇跡 - Kizuna No Kiseki":[
+        "絆ノ奇跡",
+        "Kizuna No Kiseki"
     ],
     
+    "シュガーラッシュ - Sugar Rush":[
+        "Sugar Rush",
+        "シュガーラッシュ"
+    ],
+
+    "晩餐歌 (Acoustic ver)":[
+        "晩餐歌"
+    ],
+
     "":[
         ""
     ],
