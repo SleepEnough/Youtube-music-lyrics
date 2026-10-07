@@ -422,51 +422,314 @@ function detectLyricType(lrcText) {
 // ========================================
 // 取得歌曲搜尋名稱
 // ========================================
+// track-aliases.js 新格式：
 //
-// 第一個名稱永遠是 YouTube Music
-// 目前提供的歌曲名稱。
+// const trackAliases = [
+//     {
+//         match: [
+//             "歌曲名稱 A",
+//             "歌曲名稱 A - Remastered",
+//             "歌曲名稱 A (2025)"
+//         ],
 //
-// 如果 track-aliases.js 有設定別名，
-// 再依序加入替代名稱。
+//         search: [
+//             "歌曲名稱 A",
+//             "歌曲名稱 A - Remastered",
+//             "歌曲名稱 A (Original)"
+//         ]
+//     }
+//
+// ];
+//
+// match：
+// 用來判斷 YouTube Music 抓到的歌曲
+// 是否屬於這一組歌曲。
+//
+// search：
+// 找到這一組歌曲後，實際拿來搜尋
+// 本機 LRC / LRCLIB 的歌曲名稱。
 // ========================================
-function getTrackSearchNames(
-    trackName
-) {
+function getTrackSearchNames(trackName) {
+
     const names = [];
 
-    // ====================================
-    // ① 先使用 YouTube Music 原始歌曲名稱
-    // ====================================
-    if (trackName) {
-        names.push(
-            trackName
-        );
+    // ========================================
+    // ① 沒有歌曲名稱
+    // ========================================
+    if (!trackName) {
+        return names;
     }
 
-    // ====================================
-    // ② 查詢歌曲別名
-    // ====================================
-    const aliases = trackAliases[trackName];
+    // ========================================
+    // ② 原始歌曲名稱永遠保留
+    // ========================================
+    names.push(trackName);
 
-    // ====================================
-    // ③ 加入別名
-    // ====================================
-    if (Array.isArray(aliases)) {
+    // ========================================
+    // ③ 標準化文字
+    // ========================================
+    //
+    // 目前主要處理：
+    // - 大小寫
+    // - 前後空白
+    // - 連續空白
+    //
+    // 例如：
+    //
+    // " GREATEST  -  Remastered "
+    //
+    // → "greatest - remastered"
+    // ========================================
+    const normalizeTrackName = (text) => {
 
-        for (const alias of aliases) {
+        return String(text || "")
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+    };
 
-            // 避免加入空字串
-            // 或與原名稱完全相同的名稱
+    const normalizedTrackName =
+        normalizeTrackName(trackName);
+
+
+    // ========================================
+    // ④ 尋找最符合的 alias 群組
+    // ========================================
+    let bestMatchGroup = null;
+
+    let bestMatchText = null;
+
+    let bestMatchLength = 0;
+
+    let bestMatchType = null;
+
+
+    // ========================================
+    // 逐一檢查 trackAliases
+    // ========================================
+    for (
+        const group of trackAliases
+    ) {
+
+        // ====================================
+        // 確認格式正確
+        // ====================================
+        if (!group) {
+            continue;
+        }
+
+        if (
+            !Array.isArray(group.match)
+        ) {
+            continue;
+        }
+
+        if (
+            !Array.isArray(group.search)
+        ) {
+            continue;
+        }
+
+
+        // ====================================
+        // 檢查這一組的所有 match
+        // ====================================
+        for (
+            const matchName of
+            group.match
+        ) {
+
+            if (!matchName) {
+                continue;
+            }
+
+            const normalizedMatch =
+                normalizeTrackName(
+                    matchName
+                );
+
+            if (!normalizedMatch) {
+                continue;
+            }
+
+
+            // ==================================
+            // ① 完全符合
+            // ==================================
             if (
-                alias &&
-                !names.includes(alias)
+                normalizedTrackName ===
+                normalizedMatch
             ) {
 
-                names.push(alias);
+                // 完全符合優先
+                //
+                // 如果已經找到更長的完全符合，
+                // 就保留更長的。
+                if (
+                    bestMatchType !==
+                        "exact" ||
+                    normalizedMatch.length >
+                        bestMatchLength
+                ) {
+
+                    bestMatchGroup =
+                        group;
+
+                    bestMatchText =
+                        matchName;
+
+                    bestMatchLength =
+                        normalizedMatch.length;
+
+                    bestMatchType =
+                        "exact";
+                }
+
+                continue;
+            }
+
+
+            // ==================================
+            // ② 歌曲名稱包含 match
+            // ==================================
+            if (
+                normalizedTrackName.includes(
+                    normalizedMatch
+                )
+            ) {
+
+                // 如果目前已經有完全符合，
+                // 模糊符合不能取代它。
+                if (
+                    bestMatchType ===
+                    "exact"
+                ) {
+                    continue;
+                }
+
+                // ==================================
+                // 選擇較長的 match
+                //
+                // 例如：
+                //
+                // GREATEST
+                //
+                // GREATEST - Remastered
+                //
+                // 如果兩個都符合，
+                // 優先較長的那一個。
+                // ==================================
+                if (
+                    normalizedMatch.length >
+                    bestMatchLength
+                ) {
+
+                    bestMatchGroup =
+                        group;
+
+                    bestMatchText =
+                        matchName;
+
+                    bestMatchLength =
+                        normalizedMatch.length;
+
+                    bestMatchType =
+                        "fuzzy";
+                }
+
+                continue;
+            }
+
+
+            // ==================================
+            // ③ match 包含歌曲名稱
+            // ==================================
+            if (
+                normalizedMatch.includes(
+                    normalizedTrackName
+                )
+            ) {
+
+                // 如果目前已經有完全符合，
+                // 模糊符合不能取代它。
+                if (
+                    bestMatchType ===
+                    "exact"
+                ) {
+                    continue;
+                }
+
+                if (
+                    normalizedMatch.length >
+                    bestMatchLength
+                ) {
+
+                    bestMatchGroup =
+                        group;
+
+                    bestMatchText =
+                        matchName;
+
+                    bestMatchLength =
+                        normalizedMatch.length;
+
+                    bestMatchType =
+                        "fuzzy";
+                }
             }
         }
     }
 
+
+    // ========================================
+    // ⑤ 找到 alias 群組
+    // ========================================
+    if (bestMatchGroup) {
+
+        console.log(
+            "🔍 Track Alias 匹配：",
+            {
+                trackName:
+                    trackName,
+
+                matched:
+                    bestMatchText,
+
+                type:
+                    bestMatchType,
+
+                search:
+                    bestMatchGroup.search
+            }
+        );
+
+
+        // ====================================
+        // 將 search 中的名稱加入搜尋清單
+        // ====================================
+        for (
+            const searchName of
+            bestMatchGroup.search
+        ) {
+
+            if (
+                searchName &&
+                !names.includes(
+                    searchName
+                )
+            ) {
+
+                names.push(
+                    searchName
+                );
+            }
+        }
+    }
+
+
+    // ========================================
+    // ⑥ 回傳搜尋名稱
+    // ========================================
     return names;
 }
 

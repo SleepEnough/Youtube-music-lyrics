@@ -32,8 +32,9 @@ const artistAliases = {
         "李玉剛"
     ],
 
-    "":[
-        ""
+    "Kazuma Kiryu(Takaya Kuroda)":[
+        "冴島大河",
+        "小山力也"
     ],
 
     "":[
