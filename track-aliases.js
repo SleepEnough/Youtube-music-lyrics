@@ -110,11 +110,46 @@ const trackAliases = [
 
     {
         match: [
-            ""
+            "I’m Your Treasure Box ＊あなたは マリンせんちょうを たからばこからみつけた。 - I'm Your Treasure Box * You have found captain Marine in a treasure chest"
         ],
 
         search:[
-            ""
+            "I’m Your Treasure Box ＊あなたは マリンせんちょうを たからばこからみつけた",
+            "I'm Your Treasure Box * You have found captain Marine in a treasure chest"
+        ]
+    },
+    
+    {
+        match: [
+            "[30fps Full風] Gigantic Girl 巨大少女 - Hatsune Miku 初音ミク Project DIVA ドリーミーシアター English Romaji",
+            "Gigantic Girl 巨大少女 - Hatsune Miku",
+            "Gigantic Girl"
+        ],
+
+        search:[
+            "巨大少女"
+        ]
+    },
+
+    {
+        match: [
+            "A Horny Money World ～伝説の夜～ - A Horny Money World 〜legendary night〜"
+        ],
+
+        search:[
+            "A Horny Money World ～伝説の夜～",
+            "A Horny Money World 〜legendary night〜"
+        ]
+    },
+
+    {
+        match: [
+            "僕が死のうと思ったのは - Boku Ga Shinou To Omottanowa",
+        ],
+
+        search:[
+            "僕が死のうと思ったのは",
+            "Boku Ga Shinou To Omottanowa"
         ]
     },
 

@@ -37,8 +37,9 @@ const artistAliases = {
         "小山力也"
     ],
 
-    "":[
-        ""
+    "googoo888":[
+        "Hatsune Miku",
+        "初音ミク"
     ],
 
     "":[
