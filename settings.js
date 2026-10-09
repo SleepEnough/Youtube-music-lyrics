@@ -289,8 +289,8 @@ async function readLyricsFolder(
     folderHandle
 ) {
 
-    fileList.textContent =
-        "📂 正在讀取...\n";
+    // fileList.textContent =
+    //     "📂 正在讀取...\n";
 
 
     for await (
@@ -330,19 +330,19 @@ async function readLyricsFolder(
             await entry.getFile();
 
 
-        const text =
-            await file.text();
+        // const text =
+        //     await file.text();
 
 
-        fileList.textContent +=
-            "\n🎵 " +
-            fileName +
-            "\n";
+        // fileList.textContent +=
+        //     "\n🎵 " +
+        //     fileName +
+        //     "\n";
 
 
-        fileList.textContent +=
-            text +
-            "\n";
+        // fileList.textContent +=
+        //     text +
+        //     "\n";
     }
 
 

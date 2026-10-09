@@ -563,6 +563,26 @@
         font-size: 16px;
     }
 
+    /* 一般歌詞：固定白色、不淡化、使用普通游標 */
+    .plain-lyric,
+    .plain-lyric.current,
+    .plain-lyric.lyric-near,
+    .plain-lyric.lyric-near-2,
+    .plain-lyric.lyric-far {
+        color: #ffffff !important;
+        opacity: 1 !important;
+        cursor: default !important;
+    }
+
+    /* 一般歌詞：滑鼠懸停時不改變外觀 */
+    #lyrics div.plain-lyric:hover,
+    #lyrics div.plain-lyric:hover:not(.current) {
+        color: #ffffff !important;
+        opacity: 1 !important;
+        transform: none !important;
+        cursor: default !important;
+    }
+
     </style>
 
 

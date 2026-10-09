@@ -1145,4 +1145,32 @@ chrome.runtime.onMessage.addListener(
     }
 );
 
+// ========================================
+// 接收歌詞跳轉要求並傳送至播放器
+// ========================================
+chrome.runtime.onMessage.addListener(
+    (message, sender, sendResponse) => {
+        if (message.type !== "seekToLyricTime") {
+            return;
+        }
+
+        const time = Number(message.time);
+
+        if (
+            !Number.isFinite(time) ||
+            time < 0
+        ) {
+            return;
+        }
+
+        window.postMessage(
+            {
+                type: "YTM_LYRICS_SEEK",
+                time
+            },
+            "*"
+        );
+    }
+);
+
 console.log("🚀 YTM Lyrics content.js 已載入");

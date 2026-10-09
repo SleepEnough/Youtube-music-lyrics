@@ -223,19 +223,76 @@ async function showLyrics(lyrics){
         const lyric of lyrics
     ) {
 
-        const line =
-            document.createElement(
-                "div"
-            );
+        const line = document.createElement("div");
 
 
         // 歌詞文字
-        line.textContent =
-            lyric.text;
-
+        line.textContent = lyric.text;
 
         // 把時間存進 HTML
         line.dataset.time = lyric.time;
+
+        // 一般歌詞不套用同步歌詞的淡化效果
+        if (
+            lyric.time === null ||
+            lyric.time === undefined
+        ) {
+            line.classList.add("plain-lyric");
+        }
+
+        // 只有同步歌詞才允許點擊跳轉
+        if (
+            lyric.time !== null &&
+            lyric.time !== undefined &&
+            Number.isFinite(Number(lyric.time)) &&
+            Number(lyric.time) >= 0
+        ) {
+            line.classList.add("clickable");
+            line.style.cursor = "pointer";
+            line.title = "點擊跳轉至這句歌詞";
+
+
+            line.addEventListener("click", () => {
+                // 將點擊的歌詞平滑移動至視窗中央
+                line.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+                // 清除上一個自動捲動計時器
+                if (autoScrollTimer) {
+
+                    clearTimeout(
+                        autoScrollTimer
+                    );
+                }
+
+                // 開始自動捲動
+                autoScrolling = true;
+
+                line.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+                // 自動捲動完成
+                autoScrollTimer =
+                    setTimeout(() => {
+
+                        autoScrolling = false;
+
+                        autoScrollTimer = null;
+
+                    }, 500);
+
+                // 跳轉至該句歌詞的時間
+                chrome.runtime.sendMessage({
+                    type: "seekToLyricTime",
+                    time: Number(lyric.time)
+                });
+            });
+        }
+
         line.style.fontSize = lyricFontSize + "px";
         line.style.fontWeight = lyricFontWeight;
         line.style.lineHeight = lyricLineHeight;

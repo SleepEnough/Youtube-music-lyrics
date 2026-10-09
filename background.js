@@ -3965,6 +3965,35 @@ chrome.windows.onRemoved.addListener(
 );
 
 // ========================================
+// 將歌詞跳轉要求傳送至 YouTube Music
+// ========================================
+chrome.runtime.onMessage.addListener(
+    (message, sender, sendResponse) => {
+        if (message.type !== "seekToLyricTime") {
+            return;
+        }
+
+        const time = Number(message.time);
+
+        if (
+            !Number.isFinite(time) ||
+            time < 0 ||
+            !Number.isInteger(lastYtmTabId)
+        ) {
+            return;
+        }
+
+        chrome.tabs.sendMessage(
+            lastYtmTabId,
+            {
+                type: "seekToLyricTime",
+                time
+            }
+        ).catch(() => {});
+    }
+);
+
+// ========================================
 // Background 啟動
 // ========================================
 (async () => {

@@ -5,6 +5,37 @@
 
     window.__YTM_LYRICS_PLAYER_TIME__ = true;
 
+    // ========================================
+    // 接收歌詞跳轉要求並控制 YouTube 播放器
+    // ========================================
+    window.addEventListener("message", (event) => {
+        if (
+            event.source !== window ||
+            event.data?.type !== "YTM_LYRICS_SEEK"
+        ) {
+            return;
+        }
+
+        const time = Number(event.data.time);
+
+        if (
+            !Number.isFinite(time) ||
+            time < 0
+        ) {
+            return;
+        }
+
+        const moviePlayer =
+            document.getElementById("movie_player");
+
+        if (
+            moviePlayer &&
+            typeof moviePlayer.seekTo === "function"
+        ) {
+            moviePlayer.seekTo(time, true);
+        }
+    });
+
     setInterval(() => {
         const moviePlayer =
             document.getElementById("movie_player");
