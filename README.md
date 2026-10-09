@@ -7,7 +7,8 @@
 3.點選下載解壓縮的資料夾後，就會出現擴充程式(記得要按一下啟用旁邊的更新按鍵)
 <img width="781" height="106" alt="圖片" src="https://github.com/user-attachments/assets/f6cd76d4-0dfe-4049-aa6a-41c39380c974" />
 <img width="563" height="306" alt="圖片" src="https://github.com/user-attachments/assets/fff40c2e-5684-4472-be50-0ec21a9d264b" />
-<p>###**使用說明** </p>
+
+### **使用說明**
 1.點進擴充程式後，點選擴充功能選項會跑出關於歌詞視窗的一些設定。
 <img width="607" height="402" alt="圖片" src="https://github.com/user-attachments/assets/cfcd9e63-7207-412a-8854-66b9c7bf093c" />
 <img width="442" height="579" alt="圖片" src="https://github.com/user-attachments/assets/958a604b-6ad3-462f-a80a-6b709abfc4a6" />
